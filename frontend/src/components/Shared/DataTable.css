@@ -1,0 +1,210 @@
+.datatable-wrapper {
+  width: 100%;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.datatable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.datatable-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background-color: var(--surface-color);
+  transition: all 0.2s ease;
+}
+
+.datatable-search:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.datatable-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.datatable-count {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.datatable-container {
+  overflow-x: auto;
+}
+
+.datatable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.datatable-th {
+  padding: 1rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.datatable-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.datatable-sortable:hover {
+  background-color: var(--border-light);
+}
+
+.datatable-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.datatable-sort-icon {
+  opacity: 0.6;
+  font-size: 0.75rem;
+}
+
+.datatable-td {
+  padding: 0.875rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.datatable-checkbox-th,
+.datatable-checkbox-td {
+  width: 50px;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+
+.datatable-checkbox-td input {
+  cursor: pointer;
+}
+
+.datatable-row {
+  transition: background-color 0.2s ease;
+}
+
+.datatable-row:hover {
+  background-color: var(--bg-secondary);
+}
+
+.datatable-row-selected {
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+.datatable-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.datatable-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.datatable-page-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.datatable-page-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.datatable-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.datatable-page-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .datatable-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .datatable-search {
+    width: 100%;
+  }
+
+  .datatable-th,
+  .datatable-td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Dark mode */
+[data-theme="dark"] .datatable-wrapper {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .datatable-header {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .datatable-search {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .datatable-th {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .datatable-row:hover {
+  background-color: var(--bg-secondary);
+}
