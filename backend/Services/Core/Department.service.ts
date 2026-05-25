@@ -1,41 +1,41 @@
 import Department from "../../Models/Core/Department.ts";
 
-export const  createDepartmentService = async (dData:any) => {
-    const deptCode = await Department.findOne({
-        code:dData.code
-    });
+export const createDepartmentService = async (dData: {
+  name: string;
+  code: string;
+  estdYear?: string;
+}) => {
+  const deptCode = await Department.findOne({ code: dData.code });
 
-    if(deptCode){
-        throw new Error ("Department already exists");
-    }
+  if (deptCode) {
+    throw new Error("Department already exists");
+  }
 
-    const department = await Department.create(dData);
+  return Department.create(dData);
+};
 
-    return department;
-}
+export const findDepartmentByIdService = async (id: string) => {
+  return Department.findById(id);
+};
 
-export const findDepartmentByIdService = async (id:string) => {
-    const department = await Department.findById(id);
+export const getAllDepartmentService = async () => {
+  return Department.find();
+};
 
-    if(!department) {
-        throw new Error("Department not found");
-    };
+export const updateDepartmentService = async (
+  id: string,
+  data: { name?: string; code?: string; estdYear?: string }
+) => {
+  const department = await Department.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  });
+  if (!department) {
+    throw new Error("Department not found");
+  }
+  return department;
+};
 
-    return department;
-}
-
-export const getAllDepartmentService = async (dData:any) => {
-    const departments = await Department.find();
-    return departments;
-}
-
-export const deleteDepartmentService = async (id:string) => {
-    const dept = await Department.findById(id);
-
-    if(!dept){
-        throw new Error("Department not found");
-    }
-
-    return await Department.findByIdAndDelete(dept);
-}
-
+export const deleteDepartmentService = async (id: string) => {
+  return Department.findByIdAndDelete(id);
+};

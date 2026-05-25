@@ -3,9 +3,9 @@ import {
     createDepartmentService,
     findDepartmentByIdService,
     getAllDepartmentService,
-    deleteDepartmentService
-} from "../../Services/Core/Department.service.ts"
-import Department from "../../Models/Core/Department.ts";
+    deleteDepartmentService,
+    updateDepartmentService,
+} from "../../Services/Core/Department.service.ts";
 
 export const createDepartment = async (req: Request, res: Response) => {
     try {
@@ -85,6 +85,30 @@ export const deleteDepartmentById = async (req: Request, res: Response) => {
         })
     }
 }
+
+export const updateDepartmentById = async (req: Request, res: Response) => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: "Department id is required",
+            });
+        }
+
+        const department = await updateDepartmentService(id, req.body);
+        res.status(200).json({
+            success: true,
+            message: "Department updated successfully",
+            data: department,
+        });
+    } catch (error: unknown) {
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : "Server error",
+        });
+    }
+};
 
 export const getAllDepartments = async (req:Request,res:Response) => {
     try {

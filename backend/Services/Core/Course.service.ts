@@ -1,41 +1,42 @@
 import Course from "../../Models/Core/Courses.ts";
-import mongoose from "mongoose";
 
-export const createCourseService = async (data:any) => {
-    const courseCode = await Course.findOne({
-        code:data.code
-    });
- 
-    if(courseCode) {
-        throw new Error ("Course already exists");
-    }
+export const createCourseService = async (data: Record<string, unknown>) => {
+  const courseCode = await Course.findOne({ code: data.code });
 
-    const course = await Course.create(data);
-    
-    return course;
-}
+  if (courseCode) {
+    throw new Error("Course already exists");
+  }
 
-export const getAllCoursesByIdServices = async (data:any) => {
-    const course = await Course.find();
-    return course;
-}
+  return Course.create(data);
+};
 
-export const getCourseByIdService = async (id:string) => {
-    const course = await Course.findById(id);
+export const getAllCoursesService = async () => {
+  return Course.find().populate("department", "name code");
+};
 
-    if(!course) {
-        throw new Error ("Course not found");
-    }
+export const getCourseByIdService = async (id: string) => {
+  const course = await Course.findById(id).populate("department", "name code");
+  if (!course) {
+    throw new Error("Course not found");
+  }
+  return course;
+};
 
-    return course;
-}
+export const updateCourseService = async (
+  id: string,
+  data: Record<string, unknown>
+) => {
+  const course = await Course.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  }).populate("department", "name code");
 
-export const deleteCourseByIdService = async (id:string) => {
-    const course = await Course.findById(id);
+  if (!course) {
+    throw new Error("Course not found");
+  }
+  return course;
+};
 
-    if(!course) {
-        throw new Error("Course not found");
-    }
-
-    return await Course.findByIdAndDelete(id);
-}
+export const deleteCourseByIdService = async (id: string) => {
+  return Course.findByIdAndDelete(id);
+};

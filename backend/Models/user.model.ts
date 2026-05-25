@@ -1,51 +1,31 @@
-import mongoose,{Schema,Model} from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 import bcrypt from "bcrypt";
-import type {IUser,IAddress} from "../Interfaces/user.interface.ts";
+import type { IUser, IAddress } from "../Interfaces/user.interface.ts";
 
-const addressSchema = new Schema<IAddress> (
-    {
-        city:{
-            type:String,
-            required:true,
-        },
-        state:{
-            type:String,
-        },
-        village:{
-            type:String,
-        },
-        landmark:{
-            type:String
-        }
-    }
+const addressSchema = new Schema<IAddress>({
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  country: { type: String, required: true },
+  village: { type: String },
+  landmark: { type: String },
+});
+
+const userSchema = new Schema<IUser>(
+  {
+    name: { type: String, required: true },
+    address: { type: addressSchema, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true, select: false },
+    phone: { type: String, required: true },
+  },
+  { timestamps: true }
 );
 
-const userSchema = new Schema<IUser> (
-    {
-        name :{
-            type:String,
-            required:true,
-        },
-        address :{
-            type:addressSchema,
-            required:true,
-        },
-        email :{
-            type:String,
-            required:true,
-            unique:true,
-        },
-        password:{
-            type:String,
-            required:true,
-            select:false,
-        },
-        phone: {
-            type:String,
-            required:true,
-        },
-    },{timestamps:true}
-);
+userSchema.methods.comparePassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
-const User:Model<IUser> = mongoose.model<IUser>("User",userSchema);
+const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
 export default User;

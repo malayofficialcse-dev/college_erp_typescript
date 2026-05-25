@@ -1,38 +1,49 @@
 import bcrypt from "bcrypt";
 import User from "../Models/user.model.ts";
 
-export const createUserService = async (userData:any) => {
-    const existingUser = await User.findOne({
-        email:userData.email,
-    });
+export const createUserService = async (userData: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  address: unknown;
+}) => {
+  const existingUser = await User.findOne({ email: userData.email });
 
-    if(existingUser) {
-        throw new Error("User already exists");
-    }
+  if (existingUser) {
+    throw new Error("User already exists");
+  }
 
-    const hashedPassword = await bcrypt.hash(
-        userData.password,
-        10
-    );
+  const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    userData.password = hashedPassword;
+  const user = await User.create({
+    ...userData,
+    password: hashedPassword,
+  });
 
-    const user = await User.create(userData);
-    return User;
-}
+  return user;
+};
 
 export const getAllUserService = async () => {
-    return await User.find();
+  return User.find().select("-password");
 };
 
-export const getSingleUserService = async (id: string | string[] | undefined) => {
-    (userId:string) => {
-        return User.findById(userId);
-    }
+export const getSingleUserService = async (
+  id: string | string[] | undefined
+) => {
+  const userId = Array.isArray(id) ? id[0] : id;
+  if (!userId) {
+    throw new Error("User id is required");
+  }
+  return User.findById(userId).select("-password");
 };
 
-export const deleteUserService = async (id: string | string[] | undefined) => {
-    async (userId:string) => {
-        return await User.findByIdAndDelete(userId);
-    }
+export const deleteUserService = async (
+  id: string | string[] | undefined
+) => {
+  const userId = Array.isArray(id) ? id[0] : id;
+  if (!userId) {
+    throw new Error("User id is required");
+  }
+  return User.findByIdAndDelete(userId);
 };
