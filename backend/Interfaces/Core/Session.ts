@@ -1,10 +1,8 @@
 import { Document, Types } from "mongoose";
 
-export interface ISemester extends Document {
-  name: string;
-  semesterNumber: number;
+export interface ISession extends Document {
+  label: string;
   academicYear: Types.ObjectId;
-  course?: Types.ObjectId;
   startDate: Date;
   endDate: Date;
   isActive: boolean;

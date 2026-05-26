@@ -1,0 +1,17 @@
+export { default as Department } from "./Department.ts";
+export { default as Course } from "./Courses.ts";
+export { default as AcademicYear } from "./AcademicYear.ts";
+export { default as Session } from "./Session.ts";
+export { default as Semester } from "./Semester.ts";
+export { default as Subject } from "./Subject.ts";
+export { default as Classroom } from "./Classroom.ts";
+export { default as Student } from "./Student.ts";
+export { default as Teacher } from "./Teacher.ts";
+export { default as Section } from "./Section.ts";
+export { default as Admission } from "./Admission.ts";
+export { default as Attendance } from "./Attendance.ts";
+export { default as ExamResult } from "./ExamResult.ts";
+export { default as ExamSchedule } from "./ExamSchedule.ts";
+export { default as Timetable } from "./Timetable.ts";
+export { default as SubjectAssignment } from "./SubjectAssignment.ts";
+export { default as Counseling } from "./Counseling.ts";

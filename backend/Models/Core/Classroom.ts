@@ -5,8 +5,13 @@ const classroomSchema = new Schema<IClassroom>(
   {
     roomNumber: { type: String, required: true, trim: true },
     building: { type: String, required: true, trim: true },
-    floor: { type: Number },
+    floor: { type: Number, min: 0 },
     capacity: { type: Number, required: true, min: 1 },
+    roomType: {
+      type: String,
+      enum: ["LECTURE", "LAB", "SEMINAR", "AUDITORIUM"],
+      default: "LECTURE",
+    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

@@ -1,8 +1,9 @@
 import { Document } from "mongoose";
 
 export interface IAcademicYear extends Document {
-    name:string;
-    startDate:Date;
-    endDate:Date;
-    isActive:boolean;
+  name: string;
+  code?: string;
+  startDate: Date;
+  endDate: Date;
+  isActive: boolean;
 }
