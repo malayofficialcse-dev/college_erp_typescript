@@ -23,3 +23,8 @@ export type {
 export type { ITimetable, DayOfWeek } from "./Timetable.ts";
 export type { ISubjectAssignment } from "./SubjectAssignment.ts";
 export type { ICounseling, CounselingStatus } from "./Counseling.ts";
+export type {
+  IAdmissionEmi,
+  EmiStatus,
+  PaymentMethod,
+} from "./AdmissionEmi.ts";
