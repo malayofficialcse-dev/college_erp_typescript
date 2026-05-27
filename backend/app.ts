@@ -14,6 +14,21 @@ import leaveApprovalStepRoutes from "./routes/HR/leaveApprovalStep.route.ts";
 import payrollRoutes from "./routes/HR/payroll.route.ts";
 import resignationRoutes from "./routes/HR/resignation.route.ts";
 import staffAttendanceRoutes from "./routes/HR/staffAttendance.route.ts";
+
+// Core module routes (additional)
+import studentRoutes from "./routes/Core/student.route.ts";
+import teacherRoutes from "./routes/Core/teacher.route.ts";
+import sectionRoutes from "./routes/Core/section.route.ts";
+import sessionRoutes from "./routes/Core/session.route.ts";
+import admissionRoutes from "./routes/Core/admission.route.ts";
+import admissionEmiRoutes from "./routes/Core/admissionEmi.route.ts";
+import attendanceRoutes from "./routes/Core/attendance.route.ts";
+import examResultRoutes from "./routes/Core/examResult.route.ts";
+import examScheduleRoutes from "./routes/Core/examSchedule.route.ts";
+import timetableRoutes from "./routes/Core/timetable.route.ts";
+import subjectAssignmentRoutes from "./routes/Core/subjectAssignment.route.ts";
+import counselingRoutes from "./routes/Core/counseling.route.ts";
+
 import cors from "cors";
 
 const app = express();
@@ -44,6 +59,20 @@ app.use("/api/v1/subject", subjectRoutes);
 app.use("/api/v1/subjects", subjectRoutes);
 app.use("/api/v1/classroom", classroomRoutes);
 app.use("/api/v1/classrooms", classroomRoutes);
+
+// Core module (additional)
+app.use("/api/v1/core/students", studentRoutes);
+app.use("/api/v1/core/teachers", teacherRoutes);
+app.use("/api/v1/core/sections", sectionRoutes);
+app.use("/api/v1/core/sessions", sessionRoutes);
+app.use("/api/v1/core/admissions", admissionRoutes);
+app.use("/api/v1/core/admission-emis", admissionEmiRoutes);
+app.use("/api/v1/core/attendance", attendanceRoutes);
+app.use("/api/v1/core/exam-results", examResultRoutes);
+app.use("/api/v1/core/exam-schedules", examScheduleRoutes);
+app.use("/api/v1/core/timetables", timetableRoutes);
+app.use("/api/v1/core/subject-assignments", subjectAssignmentRoutes);
+app.use("/api/v1/core/counseling", counselingRoutes);
 
 // HR module
 app.use("/api/v1/hr/employees", employeeRoutes);
