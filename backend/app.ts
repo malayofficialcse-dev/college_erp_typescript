@@ -6,6 +6,14 @@ import academicYearRoutes from "./routes/Core/academicYear.route.ts";
 import semesterRoutes from "./routes/Core/semester.route.ts";
 import subjectRoutes from "./routes/Core/subject.route.ts";
 import classroomRoutes from "./routes/Core/classroom.route.ts";
+
+// HR module routes
+import employeeRoutes from "./routes/HR/employee.route.ts";
+import leaveRoutes from "./routes/HR/leave.route.ts";
+import leaveApprovalStepRoutes from "./routes/HR/leaveApprovalStep.route.ts";
+import payrollRoutes from "./routes/HR/payroll.route.ts";
+import resignationRoutes from "./routes/HR/resignation.route.ts";
+import staffAttendanceRoutes from "./routes/HR/staffAttendance.route.ts";
 import cors from "cors";
 
 const app = express();
@@ -22,6 +30,7 @@ app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ success: true, message: "ERP API is running" });
 });
 
+//core data module routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/department", departmentRoutes);
 app.use("/api/v1/departments", departmentRoutes);
@@ -35,5 +44,13 @@ app.use("/api/v1/subject", subjectRoutes);
 app.use("/api/v1/subjects", subjectRoutes);
 app.use("/api/v1/classroom", classroomRoutes);
 app.use("/api/v1/classrooms", classroomRoutes);
+
+// HR module
+app.use("/api/v1/hr/employees", employeeRoutes);
+app.use("/api/v1/hr/leaves", leaveRoutes);
+app.use("/api/v1/hr/leave-approval-steps", leaveApprovalStepRoutes);
+app.use("/api/v1/hr/payrolls", payrollRoutes);
+app.use("/api/v1/hr/resignations", resignationRoutes);
+app.use("/api/v1/hr/staff-attendance", staffAttendanceRoutes);
 
 export default app;
