@@ -16,6 +16,7 @@ export interface ICreateEmployeeInput {
   department?: string;
   status?: EmployeeStatus;
 }
+  //kecbwucb
 
 export const createEmployeeService = async (data: ICreateEmployeeInput) => {
   const existing = await Employee.findOne({
