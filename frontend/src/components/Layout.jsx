@@ -17,12 +17,17 @@ const Layout = () => {
   const [openMenus, setOpenMenus] = useState({});
 
   const getModuleForPath = (path) => {
+    if (path.startsWith('/core/')) return 'departments';
     if (path.startsWith('/students')) return 'students';
     if (path.startsWith('/employees')) return 'employees';
     if (path.startsWith('/staff-attendance')) return 'employees';
     if (path.startsWith('/leaves')) return 'employees';
     if (path.startsWith('/leave-approvals')) return 'employees';
     if (path.startsWith('/departments')) return 'departments';
+    if (path.startsWith('/classrooms')) return 'departments';
+    if (path.startsWith('/sections')) return 'departments';
+    if (path.startsWith('/sessions')) return 'departments';
+    if (path.startsWith('/subject-assignments')) return 'departments';
     if (path.startsWith('/payroll')) return 'payroll';
     
     if (path.startsWith('/counseling')) return 'academics';
@@ -35,6 +40,7 @@ const Layout = () => {
     if (path.startsWith('/attendance')) return 'academics';
     if (path.startsWith('/exam-schedules')) return 'academics';
     if (path.startsWith('/exam-results')) return 'academics';
+    if (path.startsWith('/admissions')) return 'academics';
     
     if (path.startsWith('/library')) return 'library';
     if (path.startsWith('/book-reservations')) return 'library';
@@ -68,11 +74,8 @@ const Layout = () => {
       icon: 'bi-mortarboard-fill',
       isGroup: true,
       items: [
-        { path: '/counseling', name: 'Counseling', icon: 'bi-headset' },
-        { path: '/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
         { path: '/academic-years', name: 'Academic Years', icon: 'bi-calendar-range' },
         { path: '/semesters', name: 'Semesters', icon: 'bi-list-ol' },
-        { path: '/students', name: 'Students', icon: 'bi-person-badge-fill' },
         { path: '/teachers', name: 'Teachers', icon: 'bi-person-workspace' },
         { path: '/courses', name: 'Courses', icon: 'bi-journal-bookmark-fill' },
         { path: '/subjects', name: 'Subjects', icon: 'bi-book-half' },
@@ -83,11 +86,34 @@ const Layout = () => {
       ]
     },
     {
+      title: 'Admission',
+      icon: 'bi-mortarboard-fill',
+      isGroup: true,
+      items: [
+        { path: '/counseling', name: 'Counseling', icon: 'bi-headset' },
+        { path: '/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
+        { path: '/students', name: 'Admitted Students', icon: 'bi-person-badge-fill' },
+      ]
+    },
+    {
       title: 'Core System',
       icon: 'bi-gear-wide-connected',
       isGroup: true,
       items: [
-        { path: '/departments', name: 'Departments', icon: 'bi-building-fill' },
+        { path: '/core/academic-years', name: 'Academic Years', icon: 'bi-calendar-range' },
+        { path: '/core/semesters', name: 'Semesters', icon: 'bi-list-ol' },
+        { path: '/core/departments', name: 'Departments', icon: 'bi-building-fill' },
+        { path: '/core/courses', name: 'Courses', icon: 'bi-journal-bookmark-fill' },
+        { path: '/core/teachers', name: 'Teachers', icon: 'bi-person-workspace' },
+        { path: '/core/subjects', name: 'Subjects', icon: 'bi-book-half' },
+        { path: '/core/classrooms', name: 'Classrooms', icon: 'bi-door-open-fill' },
+        { path: '/core/sections', name: 'Sections', icon: 'bi-diagram-3-fill' },
+        { path: '/core/sessions', name: 'Sessions', icon: 'bi-calendar2-week-fill' },
+        { path: '/core/subject-assignments', name: 'Subject Assignments', icon: 'bi-person-lines-fill' },
+        { path: '/core/timetable', name: 'Timetable', icon: 'bi-calendar3' },
+        { path: '/core/attendance', name: 'Attendance', icon: 'bi-calendar-check-fill' },
+        { path: '/core/exam-schedules', name: 'Exam Schedules', icon: 'bi-calendar-event' },
+        { path: '/core/exam-results', name: 'Exam Results', icon: 'bi-award-fill' },
       ]
     },
     {
@@ -189,10 +215,15 @@ const Layout = () => {
     if (path.includes('employees')) return 'Employee Directory';
     if (path.includes('courses')) return 'Course Directory';
     if (path.includes('departments')) return 'Departments';
+    if (path.includes('classrooms')) return 'Classrooms';
+    if (path.includes('sections')) return 'Sections';
+    if (path.includes('sessions')) return 'Academic Sessions';
+    if (path.includes('subject-assignments')) return 'Subject Assignments';
     if (path.includes('teachers')) return 'Faculty List';
     if (path.includes('subjects')) return 'Subject Management';
     if (path.includes('academic-years')) return 'Academic Years';
     if (path.includes('semesters')) return 'Semesters';
+    if (path.includes('admissions')) return 'Admissions';
     if (path.includes('attendance')) return 'Attendance Registry';
     if (path.includes('exam-results')) return 'Examination Results';
     if (path.includes('timetable')) return 'Class Timetable';

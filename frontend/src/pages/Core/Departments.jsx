@@ -273,13 +273,11 @@ const Departments = () => {
   const fetchDepartments = async () => {
     try {
 
-      const response = await api.get(
-        "http://localhost:5000/api/v1/department/getalldept"
-      );
+      const response = await api.get("/departments");
 
       console.log(response.data);
 
-      setDepartments(response.data.data);
+      setDepartments(response.data);
 
     } catch (error) {
       console.error("Error fetching departments:", error);
@@ -310,10 +308,7 @@ const Departments = () => {
 
     try {
 
-      await api.post(
-        "http://localhost:5000/api/v1/department/create",
-        currentDepartment
-      );
+      await api.post("/departments", currentDepartment);
 
       setShowModal(false);
 
@@ -342,9 +337,7 @@ const Departments = () => {
 
     try {
 
-      await api.delete(
-        `http://localhost:5000/api/v1/department/${id}`
-      );
+      await api.delete(`/departments/${id}`);
 
       fetchDepartments();
 

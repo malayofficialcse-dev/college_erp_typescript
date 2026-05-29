@@ -61,17 +61,30 @@ app.use("/api/v1/classroom", classroomRoutes);
 app.use("/api/v1/classrooms", classroomRoutes);
 
 // Core module (additional)
+app.use("/api/v1/students", studentRoutes);
 app.use("/api/v1/core/students", studentRoutes);
+app.use("/api/v1/teachers", teacherRoutes);
 app.use("/api/v1/core/teachers", teacherRoutes);
+app.use("/api/v1/sections", sectionRoutes);
 app.use("/api/v1/core/sections", sectionRoutes);
+app.use("/api/v1/sessions", sessionRoutes);
 app.use("/api/v1/core/sessions", sessionRoutes);
+app.use("/api/v1/admissions", admissionRoutes);
 app.use("/api/v1/core/admissions", admissionRoutes);
+app.use("/api/v1/admission-emi", admissionEmiRoutes);
+app.use("/api/v1/admission-emis", admissionEmiRoutes);
 app.use("/api/v1/core/admission-emis", admissionEmiRoutes);
+app.use("/api/v1/attendance", attendanceRoutes);
 app.use("/api/v1/core/attendance", attendanceRoutes);
+app.use("/api/v1/exam-results", examResultRoutes);
 app.use("/api/v1/core/exam-results", examResultRoutes);
+app.use("/api/v1/exam-schedules", examScheduleRoutes);
 app.use("/api/v1/core/exam-schedules", examScheduleRoutes);
+app.use("/api/v1/timetables", timetableRoutes);
 app.use("/api/v1/core/timetables", timetableRoutes);
+app.use("/api/v1/subject-assignments", subjectAssignmentRoutes);
 app.use("/api/v1/core/subject-assignments", subjectAssignmentRoutes);
+app.use("/api/v1/counseling", counselingRoutes);
 app.use("/api/v1/core/counseling", counselingRoutes);
 
 // HR module

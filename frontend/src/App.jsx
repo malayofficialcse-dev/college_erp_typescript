@@ -6,16 +6,20 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
-import Students from './pages/Academics/Students';
 import Employees from './pages/HR/Employees';
-import Courses from './pages/Academics/Courses';
+import Students from './pages/Academics/Students';
+import Courses from './pages/Core/Courses';
 import Departments from './pages/Core/Departments';
-import Teachers from './pages/Academics/Teachers';
-import Subjects from './pages/Academics/Subjects';
-import AcademicYears from './pages/Academics/AcademicYears';
-import Semesters from './pages/Academics/Semesters';
-import Attendance from './pages/Academics/Attendance';
-import ExamResults from './pages/Academics/ExamResults';
+import Classrooms from './pages/Core/Classrooms';
+import Sections from './pages/Core/Sections';
+import Sessions from './pages/Core/Sessions';
+import SubjectAssignments from './pages/Core/SubjectAssignments';
+import Teachers from './pages/Core/Teachers';
+import Subjects from './pages/Core/Subjects';
+import AcademicYears from './pages/Core/AcademicYears';
+import Semesters from './pages/Core/Semesters';
+import Attendance from './pages/Core/Attendance';
+import ExamResults from './pages/Core/ExamResults';
 import Notices from './pages/Communication/Notices';
 import Events from './pages/Communication/Events';
 import LeaveRequests from './pages/HR/LeaveRequests';
@@ -26,8 +30,8 @@ import Library from './pages/Facilities/Library';
 import Hostel from './pages/Facilities/Hostel';
 import Transport from './pages/Facilities/Transport';
 import Reports from './pages/Reports/Reports';
-import Timetable from './pages/Academics/Timetable';
-import ExamSchedules from './pages/Academics/ExamSchedules';
+import Timetable from './pages/Core/Timetable';
+import ExamSchedules from './pages/Core/ExamSchedules';
 import EmployeeAttendance from './pages/HR/EmployeeAttendance';
 import LeaveApprovals from './pages/HR/LeaveApprovals';
 import FeeInvoices from './pages/Finance/FeeInvoices';
@@ -39,6 +43,9 @@ import PaymentAnalysis from './pages/Finance/PaymentAnalysis';
 import Admissions from './pages/Academics/Admissions';
 import AdmissionEmiSchedule from './pages/Academics/AdmissionEmiSchedule';
 import Counseling from './pages/Academics/Counseling';
+import CoreStudents from './pages/Core/Students';
+import CoreAdmissions from './pages/Core/Admissions';
+import CoreCounseling from './pages/Core/Counseling';
 
 // Employee Centre
 import MyProfile from './pages/EmployeeCentre/MyProfile';
@@ -69,12 +76,34 @@ function App() {
               <Route path="employees" element={<Employees />} />
               <Route path="courses" element={<Courses />} />
               <Route path="departments" element={<Departments />} />
+              <Route path="classrooms" element={<Classrooms />} />
+              <Route path="sections" element={<Sections />} />
+              <Route path="sessions" element={<Sessions />} />
+              <Route path="subject-assignments" element={<SubjectAssignments />} />
               <Route path="teachers" element={<Teachers />} />
               <Route path="subjects" element={<Subjects />} />
               <Route path="academic-years" element={<AcademicYears />} />
               <Route path="semesters" element={<Semesters />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="exam-results" element={<ExamResults />} />
+              <Route path="core/admissions" element={<CoreAdmissions />} />
+              <Route path="core/admissions/:id/emi" element={<AdmissionEmiSchedule />} />
+              <Route path="core/counseling" element={<CoreCounseling />} />
+              <Route path="core/students" element={<CoreStudents />} />
+              <Route path="core/courses" element={<Courses />} />
+              <Route path="core/departments" element={<Departments />} />
+              <Route path="core/classrooms" element={<Classrooms />} />
+              <Route path="core/sections" element={<Sections />} />
+              <Route path="core/sessions" element={<Sessions />} />
+              <Route path="core/subject-assignments" element={<SubjectAssignments />} />
+              <Route path="core/teachers" element={<Teachers />} />
+              <Route path="core/subjects" element={<Subjects />} />
+              <Route path="core/academic-years" element={<AcademicYears />} />
+              <Route path="core/semesters" element={<Semesters />} />
+              <Route path="core/attendance" element={<Attendance />} />
+              <Route path="core/timetable" element={<Timetable />} />
+              <Route path="core/exam-schedules" element={<ExamSchedules />} />
+              <Route path="core/exam-results" element={<ExamResults />} />
               <Route path="notices" element={<Notices />} />
               <Route path="events" element={<Events />} />
               <Route path="leaves" element={<LeaveRequests />} />
