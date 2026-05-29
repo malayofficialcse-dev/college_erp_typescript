@@ -17,10 +17,23 @@ const Semesters = () => {
     fetchAcademicYears();
   }, []);
 
+  const normalizeAcademicYear = (year) => ({
+    ...year,
+    yearLabel: year.yearLabel || year.name,
+  });
+
+  const normalizeSemester = (semester) => ({
+    ...semester,
+    semesterName: semester.semesterName || semester.name,
+    academicYear: semester.academicYear ? normalizeAcademicYear(semester.academicYear) : semester.academicYear,
+    isCurrent: semester.isCurrent || semester.isActive,
+  });
+
   const fetchSemesters = async () => {
     try {
       const response = await api.get('/semesters');
-      setSemesters(response.data.content || response.data);
+      const data = response.data.content || response.data;
+      setSemesters(Array.isArray(data) ? data.map(normalizeSemester) : []);
     } catch (error) {
       console.error('Error fetching semesters:', error);
     }
@@ -29,7 +42,8 @@ const Semesters = () => {
   const fetchAcademicYears = async () => {
     try {
       const response = await api.get('/academic-years');
-      setAcademicYears(response.data.content || response.data);
+      const data = response.data.content || response.data;
+      setAcademicYears(Array.isArray(data) ? data.map(normalizeAcademicYear) : []);
     } catch (error) {
       console.error('Error fetching academic years:', error);
     }
@@ -43,9 +57,10 @@ const Semesters = () => {
 
   const handleOpenEdit = (semester) => {
     setIsEdit(true);
+    const normalized = normalizeSemester(semester);
     setCurrentSemester({
-      ...semester,
-      academicYearId: semester.academicYear?.id || ''
+      ...normalized,
+      academicYearId: normalized.academicYear?.id || ''
     });
     setShowModal(true);
   };
@@ -58,9 +73,14 @@ const Semesters = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
+      const selectedAcademicYear = academicYears.find(ay => ay.id === currentSemester.academicYearId);
       const payload = {
-        ...currentSemester,
-        academicYear: currentSemester.academicYearId ? { id: parseInt(currentSemester.academicYearId) } : null
+        name: currentSemester.semesterName,
+        semesterNumber: Number(currentSemester.semesterNumber),
+        academicYear: currentSemester.academicYearId,
+        startDate: selectedAcademicYear?.startDate || new Date().toISOString(),
+        endDate: selectedAcademicYear?.endDate || new Date().toISOString(),
+        isActive: currentSemester.isCurrent,
       };
       
       if (isEdit) {
@@ -114,8 +134,8 @@ const Semesters = () => {
                   <td>{semester.semesterNumber}</td>
                   <td>{semester.academicYear?.yearLabel || 'N/A'}</td>
                   <td>
-                    <Badge bg={semester.current || semester.isCurrent ? 'success' : 'secondary'}>
-                      {semester.current || semester.isCurrent ? 'Current' : 'Past'}
+                    <Badge bg={semester.isCurrent ? 'success' : 'secondary'}>
+                      {semester.isCurrent ? 'Current' : 'Past'}
                     </Badge>
                   </td>
                   <td className="text-end px-4">

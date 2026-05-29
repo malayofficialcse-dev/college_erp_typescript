@@ -17,12 +17,23 @@ const AcademicYears = () => {
     fetchYears();
   }, [currentPage]);
 
+  const normalizeYear = (year) => ({
+    ...year,
+    yearLabel: year.yearLabel || year.name,
+    startYear: year.startYear || (year.startDate ? new Date(year.startDate).getFullYear() : ''),
+    endYear: year.endYear || (year.endDate ? new Date(year.endDate).getFullYear() : ''),
+    isCurrent: year.isCurrent || year.current || year.isActive,
+  });
+
   const fetchYears = async () => {
     try {
       const response = await api.get('/academic-years', {
         params: { page: currentPage, size: 10 }
       });
-      setYears(response.data.content || response.data);
+      const items = Array.isArray(response.data)
+        ? response.data.map(normalizeYear)
+        : [];
+      setYears(items);
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error('Error fetching academic years:', error);
@@ -37,7 +48,7 @@ const AcademicYears = () => {
 
   const handleOpenEdit = (year) => {
     setIsEdit(true);
-    setCurrentYear(year);
+    setCurrentYear(normalizeYear(year));
     setShowModal(true);
   };
 
@@ -48,11 +59,19 @@ const AcademicYears = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const payload = {
+      name: currentYear.yearLabel,
+      code: currentYear.code || currentYear.yearLabel,
+      startDate: `${currentYear.startYear}-01-01`,
+      endDate: `${currentYear.endYear}-12-31`,
+      isActive: currentYear.isCurrent,
+    };
+
     try {
       if (isEdit) {
-        await api.put(`/academic-years/${currentYear.id}`, currentYear);
+        await api.put(`/academic-years/${currentYear.id}`, payload);
       } else {
-        await api.post('/academic-years', currentYear);
+        await api.post('/academic-years', payload);
       }
       setShowModal(false);
       fetchYears();
@@ -100,8 +119,8 @@ const AcademicYears = () => {
                   <td>{year.startYear}</td>
                   <td>{year.endYear}</td>
                   <td>
-                    <Badge bg={year.current || year.isCurrent ? 'success' : 'secondary'}>
-                      {year.current || year.isCurrent ? 'Current' : 'Past'}
+                    <Badge bg={year.isCurrent ? 'success' : 'secondary'}>
+                      {year.isCurrent ? 'Current' : 'Past'}
                     </Badge>
                   </td>
                   <td className="text-end px-4">

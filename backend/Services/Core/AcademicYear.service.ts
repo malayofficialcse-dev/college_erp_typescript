@@ -2,12 +2,34 @@ import AcademicYear from "../../Models/Core/AcademicYear.ts";
 
 const normalizeDates = (data: Record<string, unknown>) => {
   const payload = { ...data };
+
+  const parseYear = (value: unknown) => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const year = Number(value);
+      return Number.isNaN(year) ? undefined : year;
+    }
+    return undefined;
+  };
+
   if (typeof payload.startDate === "string") {
     payload.startDate = new Date(payload.startDate);
   }
+
   if (typeof payload.endDate === "string") {
     payload.endDate = new Date(payload.endDate);
   }
+
+  const startYear = parseYear(payload.startYear);
+  if (startYear !== undefined && payload.startDate === undefined) {
+    payload.startDate = new Date(`${startYear}-01-01`);
+  }
+
+  const endYear = parseYear(payload.endYear);
+  if (endYear !== undefined && payload.endDate === undefined) {
+    payload.endDate = new Date(`${endYear}-12-31`);
+  }
+
   if (payload.yearLabel && !payload.name) {
     payload.name = payload.yearLabel;
   }

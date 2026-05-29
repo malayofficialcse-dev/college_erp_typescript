@@ -27,12 +27,16 @@ const AdmissionEmiSchedule = () => {
   const loadAll = async () => {
     try {
       setLoading(true);
-      const [admRes, emiRes] = await Promise.all([
-        api.get(`/admissions/${id}`),
-        api.get(`/admissions/${id}/emi-schedule`),
-      ]);
+      const admRes = await api.get(`/admissions/${id}`);
       setAdmission(admRes.data);
-      setEmis(emiRes.data || []);
+
+      try {
+        const emiRes = await api.get(`/admissions/emi/admission/${id}`);
+        setEmis(Array.isArray(emiRes.data) ? emiRes.data : []);
+      } catch {
+        setEmis([]);
+        setAlert({ type: 'warning', msg: 'Admission loaded, but EMI schedule records were not found.' });
+      }
     } catch { setAlert({ type: 'danger', msg: 'Failed to load admission details.' }); }
     finally { setLoading(false); }
   };
@@ -50,7 +54,8 @@ const AdmissionEmiSchedule = () => {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await api.post(`/admissions/emi/${selectedEmi.id}/pay`, {
+      await api.patch(`/admissions/emi/${selectedEmi.id}/payment`, {
+        status: 'PAID',
         paidAmount: parseFloat(payForm.paidAmount),
         paidDate: payForm.paidDate,
         fineAmount: parseFloat(payForm.fineAmount || 0),

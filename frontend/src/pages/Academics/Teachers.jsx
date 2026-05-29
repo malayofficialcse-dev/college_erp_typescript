@@ -20,15 +20,17 @@ const Teachers = () => {
   const fetchTeachers = async () => {
     try {
       const res = await api.get('/teachers/search', { params: { ...searchParams, page: currentPage, size: 10 } });
-      setTeachers(res.data.content || []);
-      setTotalPages(res.data.totalPages || 0);
+      const data = res.data.content || res.data;
+      setTeachers(Array.isArray(data) ? data : []);
+      setTotalPages(res.data.totalPages || 1);
     } catch (e) { console.error(e); }
   };
 
   const fetchDepartments = async () => {
     try {
       const res = await api.get('/departments');
-      setDepartments(res.data.content || res.data);
+      const data = res.data.content || res.data;
+      setDepartments(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }
   };
 
@@ -54,7 +56,18 @@ const Teachers = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...currentTeacher, department: currentTeacher.departmentId ? { id: parseInt(currentTeacher.departmentId) } : null };
+      const payload = {
+        employeeCode: currentTeacher.employeeCode,
+        firstName: currentTeacher.firstName,
+        lastName: currentTeacher.lastName,
+        email: currentTeacher.email,
+        phone: currentTeacher.phone,
+        designation: currentTeacher.designation,
+        qualification: currentTeacher.qualification,
+        joiningDate: currentTeacher.joiningDate || undefined,
+        status: currentTeacher.status,
+        department: currentTeacher.departmentId,
+      };
       if (isEdit) await api.put(`/teachers/${currentTeacher.id}`, payload);
       else await api.post('/teachers', payload);
       setShowModal(false); fetchTeachers();
@@ -135,14 +148,14 @@ const Teachers = () => {
               <Col md={6}><Form.Group><Form.Label>First Name</Form.Label><Form.Control name="firstName" value={currentTeacher.firstName} onChange={handleChange} required /></Form.Group></Col>
               <Col md={6}><Form.Group><Form.Label>Last Name</Form.Label><Form.Control name="lastName" value={currentTeacher.lastName} onChange={handleChange} required /></Form.Group></Col>
               <Col md={6}><Form.Group><Form.Label>Email</Form.Label><Form.Control type="email" name="email" value={currentTeacher.email} onChange={handleChange} required /></Form.Group></Col>
-              <Col md={6}><Form.Group><Form.Label>Phone</Form.Label><Form.Control name="phone" value={currentTeacher.phone} onChange={handleChange} /></Form.Group></Col>
-              <Col md={6}><Form.Group><Form.Label>Designation</Form.Label><Form.Control name="designation" value={currentTeacher.designation} onChange={handleChange} /></Form.Group></Col>
+              <Col md={6}><Form.Group><Form.Label>Phone</Form.Label><Form.Control name="phone" value={currentTeacher.phone} onChange={handleChange} required /></Form.Group></Col>
+              <Col md={6}><Form.Group><Form.Label>Designation</Form.Label><Form.Control name="designation" value={currentTeacher.designation} onChange={handleChange} required /></Form.Group></Col>
               <Col md={6}><Form.Group><Form.Label>Joining Date</Form.Label><Form.Control type="date" name="joiningDate" value={currentTeacher.joiningDate} onChange={handleChange} /></Form.Group></Col>
               <Col md={6}><Form.Group><Form.Label>Status</Form.Label>
                 <Form.Select name="status" value={currentTeacher.status} onChange={handleChange}>
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
-                  <option value="RESIGNED">Resigned</option>
+                  <option value="ON_LEAVE">On Leave</option>
                 </Form.Select>
               </Form.Group></Col>
             </Row>

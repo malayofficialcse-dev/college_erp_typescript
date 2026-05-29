@@ -10,9 +10,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = async (userId) => {
+    const id = userId || user?.id;
+    if (!id) {
+      setPermissions([]);
+      return;
+    }
+
     try {
-      const response = await api.get('/users/me/permissions');
+      const response = await api.get(`/users/${id}/permissions`);
       setPermissions(response.data);
     } catch (error) {
       console.error("Failed to fetch permissions", error);
@@ -30,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      fetchPermissions();
+    if (user?.id) {
+      fetchPermissions(user.id);
     } else {
       setPermissions([]);
     }

@@ -5,6 +5,7 @@ import api from "../../services/api";
 const Timetable = () => {
   const [timetables, setTimetables] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [currentTimetable, setCurrentTimetable] = useState(null);
@@ -19,14 +20,29 @@ const Timetable = () => {
   useEffect(() => {
     fetchTimetables();
     fetchCourses();
+    fetchSubjects();
     fetchTeachers();
   }, []);
+
+  const normalizeTimetable = (timetable) => ({
+    ...timetable,
+    courseId: timetable.course?.id || timetable.courseId || "",
+    courseName: timetable.course?.name || timetable.courseName || "",
+    subjectId: timetable.subject?.id || timetable.subjectId || "",
+    subjectName: timetable.subject?.subjectName || timetable.subject?.name || timetable.subjectName || timetable.subject || "",
+    teacherId: timetable.teacher?.id || timetable.teacherId || "",
+    teacherName: timetable.teacher
+      ? `${timetable.teacher.firstName || ""} ${timetable.teacher.lastName || ""}`.trim()
+      : timetable.teacherName || "",
+    room: timetable.classroom?.roomNumber || timetable.room || "",
+  });
 
   const fetchTimetables = async () => {
     try {
       // Fetching all (or mocking search)
       const res = await api.get("/academics/timetable/all"); // We'll mock this endpoint in api.js
-      setTimetables(res.data || []);
+      const data = res.data.content || res.data;
+      setTimetables(Array.isArray(data) ? data.map(normalizeTimetable) : []);
     } catch (err) {
       console.error(err);
     }
@@ -35,7 +51,21 @@ const Timetable = () => {
   const fetchCourses = async () => {
     try {
       const res = await api.get("/courses");
-      setCourses(res.data.content || res.data || []);
+      const data = res.data.content || res.data;
+      setCourses(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const res = await api.get("/subjects");
+      const data = res.data.content || res.data;
+      setSubjects(Array.isArray(data) ? data.map(subject => ({
+        ...subject,
+        name: subject.name || subject.subjectName,
+      })) : []);
     } catch (err) {
       console.error(err);
     }
@@ -44,14 +74,15 @@ const Timetable = () => {
   const fetchTeachers = async () => {
     try {
       const res = await api.get("/teachers");
-      setTeachers(res.data.content || res.data || []);
+      const data = res.data.content || res.data;
+      setTeachers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     }
   };
 
   const handleShow = (timetable = null) => {
-    setCurrentTimetable(timetable || { courseId: "", teacherId: "", dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00", subject: "" });
+    setCurrentTimetable(timetable ? normalizeTimetable(timetable) : { courseId: "", subjectId: "", teacherId: "", dayOfWeek: "MONDAY", startTime: "09:00", endTime: "10:00" });
     setShowModal(true);
   };
 
@@ -67,10 +98,19 @@ const Timetable = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        course: currentTimetable.courseId,
+        subject: currentTimetable.subjectId,
+        teacher: currentTimetable.teacherId,
+        dayOfWeek: currentTimetable.dayOfWeek,
+        startTime: currentTimetable.startTime,
+        endTime: currentTimetable.endTime,
+      };
+
       if (currentTimetable.id) {
-        await api.put(`/academics/timetable/${currentTimetable.id}`, currentTimetable);
+        await api.put(`/academics/timetable/${currentTimetable.id}`, payload);
       } else {
-        await api.post("/academics/timetable", currentTimetable);
+        await api.post("/academics/timetable", payload);
       }
       fetchTimetables();
       handleClose();
@@ -102,7 +142,7 @@ const Timetable = () => {
     return timetables.filter(t => {
       const matchCourse = selectedCourses.length === 0 || selectedCourses.includes(t.courseId?.toString());
       const matchDay = selectedDays.length === 0 || selectedDays.includes(t.dayOfWeek);
-      const matchSearch = (t.subject || "").toLowerCase().includes(searchKeyword.toLowerCase()) || 
+      const matchSearch = (t.subjectName || "").toLowerCase().includes(searchKeyword.toLowerCase()) || 
                           (t.teacherName || "").toLowerCase().includes(searchKeyword.toLowerCase());
       return matchCourse && matchDay && matchSearch;
     });
@@ -202,7 +242,7 @@ const Timetable = () => {
                     <td><Badge bg="info" className="text-dark bg-opacity-25">{t.dayOfWeek}</Badge></td>
                     <td className="fw-medium">{t.startTime} - {t.endTime}</td>
                     <td>{t.courseName}</td>
-                    <td className="fw-bold">{t.subject}</td>
+                    <td className="fw-bold">{t.subjectName}</td>
                     <td>{t.teacherName}</td>
                     <td>{t.room || 'TBA'}</td>
                     <td className="text-end">
@@ -247,7 +287,12 @@ const Timetable = () => {
               </Col>
               <Col md={6}>
                 <Form.Label className="small fw-semibold text-muted mb-1">Subject</Form.Label>
-                <Form.Control type="text" name="subject" value={currentTimetable?.subject || ""} onChange={handleChange} required />
+                <Form.Select name="subjectId" value={currentTimetable?.subjectId || ""} onChange={handleChange} required>
+                  <option value="">Select Subject</option>
+                  {subjects
+                    .filter(s => !currentTimetable?.courseId || s.course?.id === currentTimetable.courseId)
+                    .map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </Form.Select>
               </Col>
               <Col md={6}>
                 <Form.Label className="small fw-semibold text-muted mb-1">Start Time</Form.Label>

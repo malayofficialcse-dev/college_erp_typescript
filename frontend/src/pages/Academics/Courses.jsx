@@ -23,6 +23,7 @@ const Courses = () => {
     totalSemesters: 8,
     durationYears: 4,
     credits: '',
+    fees: '',
     courseType: 'UNDERGRADUATE',
     status: 'ACTIVE',
     departmentId: ''
@@ -33,13 +34,20 @@ const Courses = () => {
     fetchDepartments();
   }, [currentPage, searchParams]);
 
+  const normalizeCourse = (course) => ({
+    ...course,
+    courseCode: course.courseCode || course.code,
+    title: course.title || course.name,
+    departmentId: course.department?.id || course.departmentId || '',
+  });
+
   const fetchCourses = async () => {
     try {
       const response = await api.get('/courses/search', {
         params: { ...searchParams, page: currentPage, size: 10 }
       });
-      setCourses(response.data.content);
-      setTotalPages(response.data.totalPages);
+      setCourses(Array.isArray(response.data.content) ? response.data.content.map(normalizeCourse) : []);
+      setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error('Error fetching courses:', error);
     }
@@ -65,17 +73,14 @@ const Courses = () => {
     setIsEdit(false);
     setCurrentCourse({
       courseCode: '', title: '', description: '', totalSemesters: 8, durationYears: 4,
-      credits: '', courseType: 'UNDERGRADUATE', status: 'ACTIVE', departmentId: ''
+      credits: '', fees: '', courseType: 'UNDERGRADUATE', status: 'ACTIVE', departmentId: ''
     });
     setShowModal(true);
   };
 
   const handleOpenEditModal = (course) => {
     setIsEdit(true);
-    setCurrentCourse({
-      ...course,
-      departmentId: course.department?.id || ''
-    });
+    setCurrentCourse(normalizeCourse(course));
     setShowModal(true);
   };
 
@@ -88,8 +93,17 @@ const Courses = () => {
     e.preventDefault();
     try {
       const payload = {
-        ...currentCourse,
-        department: currentCourse.departmentId ? { id: parseInt(currentCourse.departmentId) } : null
+        name: currentCourse.title,
+        code: currentCourse.courseCode,
+        description: currentCourse.description,
+        totalSemesters: Number(currentCourse.totalSemesters),
+        durationYears: Number(currentCourse.durationYears),
+        duration: `${currentCourse.durationYears} Years`,
+        credits: currentCourse.credits === '' ? undefined : Number(currentCourse.credits),
+        fees: currentCourse.fees === '' ? 0 : Number(currentCourse.fees),
+        courseType: currentCourse.courseType,
+        status: currentCourse.status,
+        department: currentCourse.departmentId,
       };
       
       if (isEdit) {
@@ -142,7 +156,7 @@ const Courses = () => {
                 <option value="UNDERGRADUATE">Undergraduate</option>
                 <option value="POSTGRADUATE">Postgraduate</option>
                 <option value="DIPLOMA">Diploma</option>
-                <option value="PhD">PhD</option>
+                <option value="CERTIFICATE">Certificate</option>
               </Form.Select>
             </Col>
             <Col md={3}>
@@ -150,7 +164,7 @@ const Courses = () => {
                 <option value="">All Statuses</option>
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
-                <option value="DISCONTINUED">Discontinued</option>
+                <option value="ARCHIVED">Archived</option>
               </Form.Select>
             </Col>
           </Row>
@@ -252,7 +266,7 @@ const Courses = () => {
                     <option value="UNDERGRADUATE">Undergraduate</option>
                     <option value="POSTGRADUATE">Postgraduate</option>
                     <option value="DIPLOMA">Diploma</option>
-                    <option value="PhD">PhD</option>
+                    <option value="CERTIFICATE">Certificate</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -262,7 +276,7 @@ const Courses = () => {
                   <Form.Select name="status" value={currentCourse.status} onChange={handleFormChange} className="rounded-3">
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
-                    <option value="DISCONTINUED">Discontinued</option>
+                    <option value="ARCHIVED">Archived</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -283,6 +297,12 @@ const Courses = () => {
                 <Form.Group>
                   <Form.Label className="text-muted small fw-bold">Total Credits</Form.Label>
                   <Form.Control type="number" name="credits" value={currentCourse.credits} onChange={handleFormChange} className="rounded-3" />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label className="text-muted small fw-bold">Fees</Form.Label>
+                  <Form.Control type="number" name="fees" value={currentCourse.fees} onChange={handleFormChange} className="rounded-3" min="0" />
                 </Form.Group>
               </Col>
               <Col md={12}>

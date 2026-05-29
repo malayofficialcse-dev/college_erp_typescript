@@ -4,6 +4,7 @@ import {
   createUserController,
   getSingleUserController,
   getAllUserController,
+  getUserPermissionsController,
   deleteUserController,
 } from "../controllers/user.controller.ts";
 
@@ -13,6 +14,7 @@ router.post("/create-user",createUserController);
 
 router.get("/all-users",getAllUserController);
 
+router.get("/:id/permissions", getUserPermissionsController);
 router.get("/:id",getSingleUserController);
 
 router.delete("/:id",deleteUserController);

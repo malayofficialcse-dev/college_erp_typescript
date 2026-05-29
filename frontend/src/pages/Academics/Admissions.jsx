@@ -15,6 +15,7 @@ const Admissions = () => {
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -32,25 +33,46 @@ const Admissions = () => {
 
   useEffect(() => { loadData(); }, [filters]);
 
+  const normalizeCourse = (course) => ({
+    ...course,
+    courseCode: course.courseCode || course.code || '',
+    title: course.title || course.name || '',
+    departmentId: course.department?.id || '',
+    totalFeeAmount: course.totalFeeAmount ?? course.fees ?? '',
+  });
+
+  const normalizeAcademicYear = (year) => ({
+    ...year,
+    label: year.yearLabel || year.name || '',
+  });
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [a, s, c, d] = await Promise.all([
+      const [a, s, c, d, ay] = await Promise.all([
         api.get('/admissions/search', { params: { ...filters, size: 50 } }),
         api.get('/students/search', { params: { size: 200 } }),
         api.get('/courses', { params: { size: 200 } }),
         api.get('/departments'),
+        api.get('/academic-years'),
       ]);
       setAdmissions(a.data.content || a.data || []);
-      setStudents(s.data.content || []);
-      setCourses(c.data.content || c.data || []);
-      setDepartments(d.data.content || d.data || []);
+      const studentData = s.data.content || s.data || [];
+      setStudents(Array.isArray(studentData) ? studentData : []);
+      const courseData = c.data.content || c.data || [];
+      setCourses(Array.isArray(courseData) ? courseData.map(normalizeCourse) : []);
+      const departmentData = d.data.content || d.data || [];
+      setDepartments(Array.isArray(departmentData) ? departmentData : []);
+      const academicYearData = ay.data.content || ay.data || [];
+      setAcademicYears(Array.isArray(academicYearData) ? academicYearData.map(normalizeAcademicYear) : []);
 
       if (isFromCounseling) {
+        const selectedCourse = counselingData.desiredCourse ? normalizeCourse(counselingData.desiredCourse) : null;
         setForm(prev => ({
           ...prev,
-          courseId: counselingData.desiredCourse?.id || '',
-          departmentId: counselingData.desiredCourse?.department?.id ? counselingData.desiredCourse.department.id.toString() : ''
+          courseId: selectedCourse?.id || '',
+          departmentId: selectedCourse?.departmentId || '',
+          totalFeeAmount: selectedCourse?.totalFeeAmount || prev.totalFeeAmount,
         }));
         setShowModal(true);
       }
@@ -60,7 +82,7 @@ const Admissions = () => {
 
   const f = form;
   const filteredCourses = f.departmentId
-    ? courses.filter(c => c.department?.id === parseInt(f.departmentId))
+    ? courses.filter(c => c.departmentId === f.departmentId)
     : courses;
   const netPayable = (parseFloat(f.totalFeeAmount) || 0) - (parseFloat(f.discountAmount) || 0);
 
@@ -73,36 +95,56 @@ const Admissions = () => {
       
       // If coming from counseling and student not selected, auto-create student
       if (isFromCounseling && !targetStudentId) {
-        const studentPayload = {
-           enrollmentNumber: 'ENR' + Date.now().toString().slice(-6),
-           firstName: counselingData.firstName,
-           lastName: counselingData.lastName,
-           email: counselingData.email,
-           phone: counselingData.phone,
-           gender: counselingData.gender || 'Male',
-           dateOfBirth: counselingData.dateOfBirth,
-           status: 'ACTIVE'
-        };
-        const studentRes = await api.post('/students', studentPayload);
-        targetStudentId = studentRes.data.id;
-        
-        // Mark counseling as admitted
-        await api.patch(`/counseling/${counselingData.id}/admit`);
+        const existingStudent = students.find(student => student.email === counselingData.email);
+
+        if (existingStudent) {
+          targetStudentId = existingStudent.id;
+        } else {
+          if (!f.departmentId || !f.courseId || !f.academicYear) {
+            setAlert({ type: 'danger', msg: 'Please select course, department, and academic year before creating admission.' });
+            return;
+          }
+
+          const studentPayload = {
+            enrollmentNumber: 'ENR' + Date.now().toString().slice(-6),
+            firstName: counselingData.firstName,
+            lastName: counselingData.lastName,
+            email: counselingData.email,
+            phone: counselingData.phone,
+            gender: counselingData.gender || 'Male',
+            dateOfBirth: counselingData.dateOfBirth || '2000-01-01',
+            department: f.departmentId,
+            course: f.courseId,
+            academicYear: f.academicYear,
+            currentSemester: 1,
+            status: 'ACTIVE'
+          };
+          const studentRes = await api.post('/students', studentPayload);
+          targetStudentId = studentRes.data.id;
+        }
+
+        await api.patch(`/counseling/${counselingData.id}/status`, { status: 'ADMITTED' });
       }
 
+      const totalFeeAmount = parseFloat(f.totalFeeAmount || 0);
+      const discountAmount = parseFloat(f.discountAmount || 0);
+      const amountPaid = parseFloat(f.advanceAmount || 0);
+      const netPayableAmount = Math.max(totalFeeAmount - discountAmount, 0);
+
       await api.post('/admissions', {
-        student: { id: parseInt(targetStudentId) },
-        course: { id: parseInt(f.courseId) },
-        department: f.departmentId ? { id: parseInt(f.departmentId) } : null,
+        admissionNumber: 'ADM' + Date.now().toString().slice(-8),
+        billNumber: 'BILL' + Date.now().toString().slice(-8),
+        student: targetStudentId,
+        course: f.courseId,
+        department: f.departmentId,
         academicYear: f.academicYear, admissionDate: f.admissionDate,
-        totalFeeAmount: parseFloat(f.totalFeeAmount),
-        discountAmount: parseFloat(f.discountAmount || 0),
+        totalFeeAmount,
+        discountAmount,
+        netPayableAmount,
+        amountPaid,
+        balanceDue: Math.max(netPayableAmount - amountPaid, 0),
         paymentPlan: f.paymentPlan,
-        numberOfEmis: f.paymentPlan === 'EMI' ? parseInt(f.numberOfEmis) : null,
-        advanceAmount: parseFloat(f.advanceAmount || 0),
-        advancePaymentDate: f.advancePaymentDate || null,
-        advancePaymentMethod: f.advancePaymentMethod,
-        advanceTransactionId: f.advanceTransactionId,
+        numberOfEmis: f.paymentPlan === 'EMI' ? parseInt(f.numberOfEmis) : undefined,
         status: f.status, remarks: f.remarks,
       });
       setAlert({ type: 'success', msg: 'Admission created successfully!' });
@@ -161,9 +203,12 @@ const Admissions = () => {
               </Form.Select>
             </Col>
             <Col md={2}>
-              <Form.Control placeholder="Academic Year e.g. 2025-26" className="rounded-3"
+              <Form.Select className="rounded-3"
                 value={filters.academicYear}
-                onChange={e => setFilters({ ...filters, academicYear: e.target.value })} />
+                onChange={e => setFilters({ ...filters, academicYear: e.target.value })}>
+                <option value="">All Academic Years</option>
+                {academicYears.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}
+              </Form.Select>
             </Col>
             <Col md={2}>
               <Button variant="link" className="text-danger text-decoration-none p-0"
@@ -211,10 +256,10 @@ const Admissions = () => {
                       <small className="text-muted">{a.student?.enrollmentNumber}</small>
                     </td>
                     <td>
-                      <div className="fw-medium">{a.course?.title}</div>
+                      <div className="fw-medium">{a.course?.title || a.course?.name}</div>
                       <small className="text-muted">{a.department?.name || '—'}</small>
                     </td>
-                    <td>{a.academicYear}</td>
+                    <td>{a.academicYear?.name || a.academicYear?.label || a.academicYear}</td>
                     <td className="fw-semibold">₹{Number(a.netPayableAmount || 0).toLocaleString()}</td>
                     <td className="text-success fw-semibold">₹{Number(a.amountPaid || 0).toLocaleString()}</td>
                     <td className="text-danger fw-semibold">₹{Number(a.balanceDue || 0).toLocaleString()}</td>
@@ -287,11 +332,12 @@ const Admissions = () => {
                 <Form.Select className="rounded-3" required value={f.courseId}
                   onChange={e => {
                     const courseId = e.target.value;
-                    const selectedCourse = courses.find(c => c.id === parseInt(courseId));
+                    const selectedCourse = courses.find(c => c.id === courseId);
                     setForm({
                       ...f,
                       courseId,
-                      departmentId: selectedCourse?.department?.id ? selectedCourse.department.id.toString() : f.departmentId
+                      departmentId: selectedCourse?.departmentId || f.departmentId,
+                      totalFeeAmount: selectedCourse?.totalFeeAmount !== '' ? String(selectedCourse.totalFeeAmount) : f.totalFeeAmount,
                     });
                   }}>
                   <option value="">Select Course</option>
@@ -305,11 +351,11 @@ const Admissions = () => {
                 <Form.Select className="rounded-3" value={f.departmentId}
                   onChange={e => {
                     const newDeptId = e.target.value;
-                    const selectedCourse = courses.find(c => c.id === parseInt(f.courseId));
+                    const selectedCourse = courses.find(c => c.id === f.courseId);
                     setForm({
                       ...f,
                       departmentId: newDeptId,
-                      courseId: selectedCourse && selectedCourse.department?.id !== parseInt(newDeptId) ? '' : f.courseId
+                      courseId: selectedCourse && selectedCourse.departmentId !== newDeptId ? '' : f.courseId
                     });
                   }}>
                   <option value="">Select Department</option>
@@ -318,8 +364,11 @@ const Admissions = () => {
               </Col>
               <Col md={4}>
                 <Form.Label className="small fw-bold text-muted">Academic Year *</Form.Label>
-                <Form.Control className="rounded-3" required placeholder="2025-26" value={f.academicYear}
-                  onChange={e => setForm({ ...f, academicYear: e.target.value })} />
+                <Form.Select className="rounded-3" required value={f.academicYear}
+                  onChange={e => setForm({ ...f, academicYear: e.target.value })}>
+                  <option value="">Select Academic Year</option>
+                  {academicYears.map(year => <option key={year.id} value={year.id}>{year.label}</option>)}
+                </Form.Select>
               </Col>
               <Col md={4}>
                 <Form.Label className="small fw-bold text-muted">Admission Date *</Form.Label>

@@ -5,42 +5,83 @@ import api from '../../services/api';
 const Subjects = () => {
   const [subjects, setSubjects] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [semesters, setSemesters] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [searchParams, setSearchParams] = useState({ keyword: '', courseId: '' });
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [current, setCurrent] = useState({ subjectCode: '', name: '', description: '', credits: '', semesterNumber: '', subjectType: 'THEORY', courseId: '', teacherId: '' });
+  const [current, setCurrent] = useState({ subjectCode: '', name: '', description: '', credits: '', semesterNumber: '', subjectType: 'Theory', courseId: '', semesterId: '', teacherId: '' });
 
-  useEffect(() => { fetchSubjects(); fetchCourses(); fetchTeachers(); }, [currentPage, searchParams]);
+  useEffect(() => { fetchSubjects(); fetchCourses(); fetchSemesters(); fetchTeachers(); }, [currentPage, searchParams]);
+
+  const normalizeSubject = (subject) => ({
+    ...subject,
+    name: subject.name || subject.subjectName,
+  });
 
   const fetchSubjects = async () => {
     try {
       const res = await api.get('/subjects/search', { params: { ...searchParams, page: currentPage, size: 10 } });
-      setSubjects(res.data.content || []); setTotalPages(res.data.totalPages || 0);
+      const data = res.data.content || res.data;
+      setSubjects(Array.isArray(data) ? data.map(normalizeSubject) : []);
+      setTotalPages(res.data.totalPages || 1);
     } catch (e) { console.error(e); }
   };
 
   const fetchCourses = async () => {
-    try { const res = await api.get('/courses'); setCourses(res.data.content || res.data); } catch (e) { console.error(e); }
+    try {
+      const res = await api.get('/courses');
+      const data = res.data.content || res.data;
+      setCourses(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchSemesters = async () => {
+    try {
+      const res = await api.get('/semesters');
+      const data = res.data.content || res.data;
+      setSemesters(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
   };
 
   const fetchTeachers = async () => {
-    try { const res = await api.get('/teachers/search', { params: { size: 200 } }); setTeachers(res.data.content || []); } catch (e) { console.error(e); }
+    try {
+      const res = await api.get('/teachers/search', { params: { size: 200 } });
+      const data = res.data.content || res.data;
+      setTeachers(Array.isArray(data) ? data : []);
+    } catch (e) { console.error(e); }
   };
 
   const handleSearchChange = (e) => { setSearchParams(prev => ({ ...prev, [e.target.name]: e.target.value })); setCurrentPage(0); };
 
-  const openAdd = () => { setIsEdit(false); setCurrent({ subjectCode: '', name: '', description: '', credits: '', semesterNumber: '', subjectType: 'THEORY', courseId: '', teacherId: '' }); setShowModal(true); };
-  const openEdit = (s) => { setIsEdit(true); setCurrent({ ...s, courseId: s.course?.id || '', teacherId: s.teacher?.id || '' }); setShowModal(true); };
+  const openAdd = () => { setIsEdit(false); setCurrent({ subjectCode: '', name: '', description: '', credits: '', semesterNumber: '', subjectType: 'Theory', courseId: '', semesterId: '', teacherId: '' }); setShowModal(true); };
+  const openEdit = (s) => {
+    const normalized = normalizeSubject(s);
+    setIsEdit(true);
+    setCurrent({ ...normalized, courseId: normalized.course?.id || '', semesterId: normalized.semester?.id || '', teacherId: normalized.teacher?.id || '' });
+    setShowModal(true);
+  };
 
   const handleChange = (e) => setCurrent(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const payload = { ...current, course: current.courseId ? { id: parseInt(current.courseId) } : null, teacher: current.teacherId ? { id: parseInt(current.teacherId) } : null };
+      const selectedCourse = courses.find(course => course.id === current.courseId);
+      const payload = {
+        subjectCode: current.subjectCode,
+        subjectName: current.name,
+        description: current.description,
+        department: selectedCourse?.department?.id,
+        course: current.courseId,
+        semester: current.semesterId,
+        teacher: current.teacherId || undefined,
+        semesterNumber: Number(current.semesterNumber),
+        credits: Number(current.credits),
+        subjectType: current.subjectType,
+      };
       if (isEdit) await api.put(`/subjects/${current.id}`, payload);
       else await api.post('/subjects', payload);
       setShowModal(false); fetchSubjects();
@@ -77,7 +118,7 @@ const Subjects = () => {
                 <tr key={s.id}>
                   <td className="px-4 fw-bold">{s.subjectCode}</td><td>{s.name}</td>
                   <td>{s.course?.name || 'N/A'}</td><td>{s.semesterNumber}</td><td>{s.credits}</td>
-                  <td><Badge bg={s.subjectType === 'THEORY' ? 'primary' : s.subjectType === 'PRACTICAL' ? 'success' : 'warning'}>{s.subjectType}</Badge></td>
+                  <td><Badge bg={s.subjectType === 'Theory' ? 'primary' : s.subjectType === 'Practical' ? 'success' : 'warning'}>{s.subjectType}</Badge></td>
                   <td className="text-end px-4">
                     <Button variant="outline-primary" size="sm" className="me-2" onClick={() => openEdit(s)}><i className="bi bi-pencil"></i></Button>
                     <Button variant="outline-danger" size="sm" onClick={() => handleDelete(s.id)}><i className="bi bi-trash"></i></Button>
@@ -109,6 +150,10 @@ const Subjects = () => {
                 <Form.Select name="courseId" value={current.courseId} onChange={handleChange} required>
                   <option value="">Select Course</option>{courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </Form.Select></Form.Group></Col>
+              <Col md={6}><Form.Group><Form.Label>Semester</Form.Label>
+                <Form.Select name="semesterId" value={current.semesterId} onChange={handleChange} required>
+                  <option value="">Select Semester</option>{semesters.map(s => <option key={s.id} value={s.id}>{s.name || s.semesterName}</option>)}
+                </Form.Select></Form.Group></Col>
               <Col md={6}><Form.Group><Form.Label>Assign Teacher</Form.Label>
                 <Form.Select name="teacherId" value={current.teacherId} onChange={handleChange}>
                   <option value="">Select Teacher</option>{teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName}</option>)}
@@ -117,7 +162,7 @@ const Subjects = () => {
               <Col md={4}><Form.Group><Form.Label>Credits</Form.Label><Form.Control type="number" name="credits" value={current.credits} onChange={handleChange} required /></Form.Group></Col>
               <Col md={4}><Form.Group><Form.Label>Type</Form.Label>
                 <Form.Select name="subjectType" value={current.subjectType} onChange={handleChange}>
-                  <option value="THEORY">Theory</option><option value="PRACTICAL">Practical</option><option value="ELECTIVE">Elective</option>
+                  <option value="Theory">Theory</option><option value="Practical">Practical</option><option value="Lab">Lab</option>
                 </Form.Select></Form.Group></Col>
               <Col md={12}><Form.Group><Form.Label>Description</Form.Label><Form.Control as="textarea" rows={2} name="description" value={current.description} onChange={handleChange} /></Form.Group></Col>
             </Row>
