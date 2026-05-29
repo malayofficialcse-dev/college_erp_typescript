@@ -14,18 +14,32 @@ const admissionEmiSchema = new Schema<IAdmissionEmi>(
     paidAmount: { type: Number, default: 0, min: 0 },
     paidDate: { type: Date },
     fineAmount: { type: Number, default: 0, min: 0 },
+    semester: { type: Number, min: 1 },
     paymentMethod: {
       type: String,
-      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "DD"],
+      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD"],
     },
     transactionId: { type: String, trim: true },
     receiptNumber: { type: String, trim: true },
     status: {
       type: String,
-      enum: ["PENDING", "PAID", "OVERDUE", "WAIVED"],
+      enum: ["PENDING", "PAID", "OVERDUE", "WAIVED", "PARTIAL"],
       default: "PENDING",
     },
     remarks: { type: String, trim: true },
+    carryOverAmount: { type: Number, default: 0, min: 0 },
+    chequeDetails: {
+      bankName: { type: String, trim: true },
+      holderName: { type: String, trim: true },
+      chequeNumber: { type: String, trim: true },
+      chequeDate: { type: Date },
+    },
+    bankTransferDetails: {
+      bankName: { type: String, trim: true },
+      accountHolder: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      ifscCode: { type: String, trim: true },
+    },
   },
   { timestamps: true }
 );

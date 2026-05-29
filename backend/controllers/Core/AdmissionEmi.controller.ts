@@ -6,6 +6,8 @@ import {
   getEmiByIdService,
   updateEmiPaymentService,
   deleteEmiService,
+  validatePaymentMethod,
+  type IUpdatePaymentInput,
 } from "../../Services/Core/AdmissionEmi.service.ts";
 
 export const createAdmissionEmi = async (req: Request, res: Response) => {
@@ -54,10 +56,20 @@ export const updateEmiPayment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     if (!id) return res.status(400).json({ success: false, message: "EMI id is required" });
-    const emi = await updateEmiPaymentService(id, req.body);
+
+    const paymentData: IUpdatePaymentInput = req.body;
+
+    if (paymentData.paymentMethod) {
+      const validation = validatePaymentMethod(paymentData.paymentMethod, paymentData);
+      if (!validation.valid) {
+        return res.status(400).json({ success: false, message: validation.error });
+      }
+    }
+
+    const emi = await updateEmiPaymentService(id, paymentData);
     res.status(200).json({ success: true, message: "EMI payment updated successfully", data: emi });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 

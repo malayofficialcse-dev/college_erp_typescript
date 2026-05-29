@@ -1,11 +1,12 @@
 import AdmissionEmi from "../../Models/Core/AdmissionEmi.ts";
-import type { EmiStatus, PaymentMethod } from "../../Interfaces/Core/index.ts";
+import type { EmiStatus, PaymentMethod, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
 
 export interface ICreateAdmissionEmiInput {
   admission: string;
   emiNumber: number;
   emiAmount: number;
   dueDate: Date;
+  semester?: number;
   paidAmount?: number;
   paidDate?: Date;
   fineAmount?: number;
@@ -14,7 +15,61 @@ export interface ICreateAdmissionEmiInput {
   receiptNumber?: string;
   status?: EmiStatus;
   remarks?: string;
+  chequeDetails?: ChequeDetails;
+  bankTransferDetails?: BankTransferDetails;
 }
+
+export interface IUpdatePaymentInput {
+  status?: EmiStatus;
+  paidAmount?: number;
+  paidDate?: Date;
+  fineAmount?: number;
+  paymentMethod?: PaymentMethod;
+  transactionId?: string;
+  receiptNumber?: string;
+  remarks?: string;
+  carryOverAmount?: number;
+  chequeDetails?: ChequeDetails;
+  bankTransferDetails?: BankTransferDetails;
+}
+
+export const validatePaymentMethod = (
+  method: PaymentMethod,
+  data: IUpdatePaymentInput
+): { valid: boolean; error?: string } => {
+  if (!method) return { valid: true };
+
+  if (method === "CHEQUE") {
+    const cheque = data.chequeDetails;
+    if (!cheque?.bankName || !cheque?.holderName || !cheque?.chequeNumber || !cheque?.chequeDate) {
+      return {
+        valid: false,
+        error: "For cheque payments, bank name, holder name, cheque number, and date are required",
+      };
+    }
+  }
+
+  if (method === "BANK_TRANSFER") {
+    const bank = data.bankTransferDetails;
+    if (!bank?.bankName || !bank?.accountHolder || !bank?.accountNumber || !bank?.ifscCode) {
+      return {
+        valid: false,
+        error: "For bank transfer, bank name, account holder, account number, and IFSC code are required",
+      };
+    }
+  }
+
+  if (["UPI", "CARD", "BANK_TRANSFER"].includes(method)) {
+    if (!data.transactionId || data.transactionId.trim() === "") {
+      return {
+        valid: false,
+        error: `Transaction ID is required for ${method} payments`,
+      };
+    }
+  }
+
+  return { valid: true };
+};
 
 export const createAdmissionEmiService = async (
   data: ICreateAdmissionEmiInput
@@ -54,25 +109,73 @@ export const getEmiByIdService = async (id: string) => {
   );
 };
 
+export const getNextEmiService = async (admissionId: string, currentEmiNumber: number) => {
+  return AdmissionEmi.findOne({
+    admission: admissionId,
+    emiNumber: currentEmiNumber + 1,
+  });
+};
+
+export const handlePartialPaymentService = async (
+  id: string,
+  paidAmount: number,
+  dueAmount: number
+): Promise<{ carryOver: number; status: EmiStatus }> => {
+  if (paidAmount >= dueAmount) {
+    return { carryOver: 0, status: "PAID" };
+  }
+
+  const remainder = dueAmount - paidAmount;
+  return { carryOver: remainder, status: "PARTIAL" };
+};
+
 export const updateEmiPaymentService = async (
   id: string,
-  data: {
-    status?: EmiStatus;
-    paidAmount?: number;
-    paidDate?: Date;
-    fineAmount?: number;
-    paymentMethod?: PaymentMethod;
-    transactionId?: string;
-    receiptNumber?: string;
-    remarks?: string;
-  }
+  data: IUpdatePaymentInput
 ) => {
-  const emi = await AdmissionEmi.findByIdAndUpdate(id, data, {
+  const emi = await AdmissionEmi.findById(id);
+  if (!emi) throw new Error("EMI record not found");
+
+  if (data.paymentMethod) {
+    const validation = validatePaymentMethod(data.paymentMethod, data);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+  }
+
+  const dueAmount = emi.emiAmount + (emi.fineAmount || 0) + (emi.carryOverAmount || 0);
+  const paidAmount = data.paidAmount || 0;
+
+  if (paidAmount > 0) {
+    const { carryOver, status } = await handlePartialPaymentService(
+      id,
+      paidAmount,
+      dueAmount
+    );
+
+    data.status = status;
+    data.carryOverAmount = carryOver;
+
+    if (carryOver > 0 && status === "PARTIAL") {
+      const nextEmi = await getNextEmiService(
+        emi.admission.toString(),
+        emi.emiNumber
+      );
+      if (nextEmi) {
+        await AdmissionEmi.findByIdAndUpdate(nextEmi._id, {
+          carryOverAmount: (nextEmi.carryOverAmount || 0) + carryOver,
+        });
+      }
+    }
+  }
+
+  const updatedEmi = await AdmissionEmi.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true,
   }).populate("admission", "admissionNumber student");
-  if (!emi) throw new Error("EMI record not found");
-  return emi;
+
+  if (!updatedEmi) throw new Error("EMI record not found");
+  return updatedEmi;
 };
 
 export const deleteEmiService = async (id: string) => {
