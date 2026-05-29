@@ -79,10 +79,13 @@ const Attendance = () => {
     try {
       const payload = {
         ...currentRecord,
-        student: currentRecord.studentId ? { id: parseInt(currentRecord.studentId) } : null,
-        subject: currentRecord.subjectId ? { id: parseInt(currentRecord.subjectId) } : null
+        student: currentRecord.studentId || null,
+        subject: currentRecord.subjectId || null
       };
       
+      delete payload.studentId;
+      delete payload.subjectId;
+
       if (isEdit) {
         await api.put(`/attendance/${currentRecord.id}`, payload);
       } else {

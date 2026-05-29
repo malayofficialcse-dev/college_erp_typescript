@@ -30,6 +30,11 @@ import subjectAssignmentRoutes from "./routes/Core/subjectAssignment.route.ts";
 import counselingRoutes from "./routes/Core/counseling.route.ts";
 import feeRoutes from "./routes/Core/fee.route.ts";
 
+import libraryRoutes from "./routes/facilities/library.route.ts";
+import hostelRoutes from "./routes/facilities/hostel.route.ts";
+import transportRoutes from "./routes/facilities/transport.route.ts";
+import noticeRoutes from "./routes/Communication/notice.route.ts";
+
 import cors from "cors";
 
 const app = express();
@@ -97,5 +102,11 @@ app.use("/api/v1/hr/leave-approval-steps", leaveApprovalStepRoutes);
 app.use("/api/v1/hr/payrolls", payrollRoutes);
 app.use("/api/v1/hr/resignations", resignationRoutes);
 app.use("/api/v1/hr/staff-attendance", staffAttendanceRoutes);
+
+// Facilities and Communication
+app.use("/api/v1/library", libraryRoutes);
+app.use("/api/v1/hostel", hostelRoutes);
+app.use("/api/v1/transport", transportRoutes);
+app.use("/api/v1/notices", noticeRoutes);
 
 export default app;

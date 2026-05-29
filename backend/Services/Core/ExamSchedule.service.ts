@@ -39,7 +39,7 @@ export const getAllExamSchedulesService = async (filter: {
 
   return ExamSchedule.find(query)
     .populate("course", "name code")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("semester", "name semesterNumber")
     .populate("classroom", "roomNumber building")
     .sort({ examDate: 1 });
@@ -48,7 +48,7 @@ export const getAllExamSchedulesService = async (filter: {
 export const getExamScheduleByIdService = async (id: string) => {
   return ExamSchedule.findById(id)
     .populate("course", "name code")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("semester", "name semesterNumber")
     .populate("classroom", "roomNumber building");
 };
@@ -62,7 +62,7 @@ export const updateExamScheduleService = async (
     runValidators: true,
   })
     .populate("course", "name code")
-    .populate("subject", "name code");
+    .populate("subject", "subjectName subjectCode");
   if (!schedule) throw new Error("Exam schedule not found");
   return schedule;
 };

@@ -53,7 +53,7 @@ export const getAllAttendanceService = async (filter: {
 
   return Attendance.find(query)
     .populate("student", "firstName lastName enrollmentNumber")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("markedBy", "firstName lastName")
     .sort({ date: -1 });
 };
@@ -61,7 +61,7 @@ export const getAllAttendanceService = async (filter: {
 export const getAttendanceByIdService = async (id: string) => {
   return Attendance.findById(id)
     .populate("student", "firstName lastName enrollmentNumber")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("markedBy", "firstName lastName");
 };
 
@@ -74,7 +74,7 @@ export const updateAttendanceService = async (
     runValidators: true,
   })
     .populate("student", "firstName lastName enrollmentNumber")
-    .populate("subject", "name code");
+    .populate("subject", "subjectName subjectCode");
   if (!attendance) throw new Error("Attendance record not found");
   return attendance;
 };

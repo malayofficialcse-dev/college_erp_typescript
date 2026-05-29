@@ -5,6 +5,7 @@ import api from "../../services/api";
 const ExamSchedules = () => {
   const [schedules, setSchedules] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [currentSchedule, setCurrentSchedule] = useState(null);
 
@@ -18,6 +19,7 @@ const ExamSchedules = () => {
   useEffect(() => {
     fetchSchedules();
     fetchCourses();
+    fetchSubjects();
   }, []);
 
   const fetchSchedules = async () => {
@@ -33,6 +35,15 @@ const ExamSchedules = () => {
     try {
       const res = await api.get("/courses");
       setCourses(res.data.content || res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const res = await api.get("/subjects/search", { params: { size: 100 } });
+      setSubjects(res.data.content || res.data || []);
     } catch (err) {
       console.error(err);
     }
@@ -55,10 +66,16 @@ const ExamSchedules = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...currentSchedule,
+        course: currentSchedule.courseId || null,
+        subject: currentSchedule.subjectId || null
+      };
+
       if (currentSchedule.id) {
-        await api.put(`/academic-features/exam-schedules/${currentSchedule.id}`, currentSchedule);
+        await api.put(`/academic-features/exam-schedules/${currentSchedule.id}`, payload);
       } else {
-        await api.post("/academic-features/exam-schedules", currentSchedule);
+        await api.post("/academic-features/exam-schedules", payload);
       }
       fetchSchedules();
       handleClose();
@@ -79,7 +96,7 @@ const ExamSchedules = () => {
     const matchCourse = selectedCourses.length === 0 || selectedCourses.includes(s.courseId?.toString());
     const matchType = !examType || s.examType === examType;
     const matchSearch = (s.examName || "").toLowerCase().includes(searchKeyword.toLowerCase()) || 
-                        (s.subject || "").toLowerCase().includes(searchKeyword.toLowerCase());
+                        (s.subject?.subjectName || "").toLowerCase().includes(searchKeyword.toLowerCase());
     return matchCourse && matchType && matchSearch;
   });
 
@@ -169,7 +186,7 @@ const ExamSchedules = () => {
                     <td className="fw-medium">{s.examName}</td>
                     <td><Badge bg={s.examType === 'FINAL' ? 'danger' : 'primary'} className="bg-opacity-75">{s.examType}</Badge></td>
                     <td>{s.courseName} <Badge bg="secondary">Sem {s.semester}</Badge></td>
-                    <td>{s.subject}</td>
+                    <td>{s.subject?.subjectName || 'N/A'}</td>
                     <td>{s.room || 'TBA'}</td>
                     <td className="text-end">
                       <Button variant="outline-primary" size="sm" className="me-2" title="Generate Hall Tickets">
@@ -221,7 +238,10 @@ const ExamSchedules = () => {
               </Col>
               <Col md={12}>
                 <Form.Label className="small fw-semibold text-muted mb-1">Subject Name</Form.Label>
-                <Form.Control type="text" name="subject" value={currentSchedule?.subject || ""} onChange={handleChange} required />
+                <Form.Select name="subjectId" value={currentSchedule?.subjectId || ""} onChange={handleChange}>
+                  <option value="">Select Subject</option>
+                  {subjects.map(s => <option key={s.id} value={s.id}>{s.name || s.subjectName} ({s.code || s.subjectCode})</option>)}
+                </Form.Select>
               </Col>
               <Col md={4}>
                 <Form.Label className="small fw-semibold text-muted mb-1">Date</Form.Label>

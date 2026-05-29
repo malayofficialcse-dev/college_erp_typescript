@@ -138,6 +138,21 @@ class BookReservationController {
       });
     }
   }
+
+  async getReservationsByStudent(req: Request, res: Response): Promise<void> {
+    try {
+      const reservations = await BookReservationService.getReservationsByBorrower(req.params.studentId, "STUDENT");
+      res.status(200).json({
+        success: true,
+        data: reservations,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to fetch student reservations",
+      });
+    }
+  }
 }
 
 export default new BookReservationController();

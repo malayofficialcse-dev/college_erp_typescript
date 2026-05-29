@@ -38,7 +38,7 @@ export const getAllTimetablesService = async (filter: {
 
   return Timetable.find(query)
     .populate("course", "name code")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("teacher", "firstName lastName employeeCode")
     .populate("classroom", "roomNumber building")
     .populate("semester", "name semesterNumber")
@@ -49,7 +49,7 @@ export const getAllTimetablesService = async (filter: {
 export const getTimetableByIdService = async (id: string) => {
   return Timetable.findById(id)
     .populate("course", "name code")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("teacher", "firstName lastName employeeCode")
     .populate("classroom", "roomNumber building")
     .populate("semester", "name semesterNumber")
@@ -65,7 +65,7 @@ export const updateTimetableService = async (
     runValidators: true,
   })
     .populate("course", "name code")
-    .populate("subject", "name code")
+    .populate("subject", "subjectName subjectCode")
     .populate("teacher", "firstName lastName employeeCode");
   if (!timetable) throw new Error("Timetable entry not found");
   return timetable;

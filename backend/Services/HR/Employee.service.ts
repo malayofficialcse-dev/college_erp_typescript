@@ -32,12 +32,56 @@ export const getAllEmployeesService = async (filter: {
   department?: string;
   employeeType?: string;
   status?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
 }) => {
   const query: Record<string, unknown> = {};
-  if (filter.department) query.department = filter.department;
-  if (filter.employeeType) query.employeeType = filter.employeeType;
-  if (filter.status) query.status = filter.status;
-  return Employee.find(query).populate("department", "name code");
+
+  if (filter.department) {
+    const ids = filter.department.split(',').map(s => s.trim()).filter(Boolean);
+    query.department = ids.length === 1 ? ids[0] : { $in: ids };
+  }
+  if (filter.employeeType) {
+    const types = filter.employeeType.split(',').map(s => s.trim()).filter(Boolean);
+    query.employeeType = types.length === 1 ? types[0] : { $in: types };
+  }
+  if (filter.status) {
+    const statuses = filter.status.split(',').map(s => s.trim()).filter(Boolean);
+    query.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+  }
+  if (filter.keyword) {
+    const rx = { $regex: filter.keyword, $options: 'i' };
+    query.$or = [
+      { firstName: rx },
+      { lastName: rx },
+      { email: rx },
+      { employeeCode: rx },
+      { phone: rx },
+      { designation: rx }
+    ];
+  }
+
+  const page = Math.max((filter.page ?? 0), 0);
+  const size = Math.min(filter.size ?? 15, 1000);
+  const skip = page * size;
+
+  const [employees, total] = await Promise.all([
+    Employee.find(query)
+      .populate("department", "name code")
+      .sort({ employeeCode: 1 })
+      .skip(skip)
+      .limit(size),
+    Employee.countDocuments(query),
+  ]);
+
+  return {
+    content: employees,
+    total,
+    page,
+    size,
+    totalPages: Math.ceil(total / size),
+  };
 };
 
 export const getEmployeeByIdService = async (id: string) => {
