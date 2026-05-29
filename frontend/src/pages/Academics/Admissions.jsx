@@ -37,7 +37,7 @@ const Admissions = () => {
     ...course,
     courseCode: course.courseCode || course.code || '',
     title: course.title || course.name || '',
-    departmentId: course.department?.id || '',
+    departmentId: course.department?.id || course.department || '',
     totalFeeAmount: course.totalFeeAmount ?? course.fees ?? '',
   });
 
@@ -50,7 +50,7 @@ const Admissions = () => {
     try {
       setLoading(true);
       const [a, s, c, d, ay] = await Promise.all([
-        api.get('/admissions/search', { params: { ...filters, size: 50 } }),
+        api.get('/admissions', { params: filters }),
         api.get('/students/search', { params: { size: 200 } }),
         api.get('/courses', { params: { size: 200 } }),
         api.get('/departments'),
@@ -82,7 +82,7 @@ const Admissions = () => {
 
   const f = form;
   const filteredCourses = f.departmentId
-    ? courses.filter(c => c.departmentId === f.departmentId)
+    ? courses.filter(c => String(c.departmentId) === String(f.departmentId))
     : courses;
   const netPayable = (parseFloat(f.totalFeeAmount) || 0) - (parseFloat(f.discountAmount) || 0);
 
@@ -332,7 +332,7 @@ const Admissions = () => {
                 <Form.Select className="rounded-3" required value={f.courseId}
                   onChange={e => {
                     const courseId = e.target.value;
-                    const selectedCourse = courses.find(c => c.id === courseId);
+                    const selectedCourse = courses.find(c => String(c.id) === String(courseId));
                     setForm({
                       ...f,
                       courseId,
@@ -351,11 +351,11 @@ const Admissions = () => {
                 <Form.Select className="rounded-3" value={f.departmentId}
                   onChange={e => {
                     const newDeptId = e.target.value;
-                    const selectedCourse = courses.find(c => c.id === f.courseId);
+                    const selectedCourse = courses.find(c => String(c.id) === String(f.courseId));
                     setForm({
                       ...f,
                       departmentId: newDeptId,
-                      courseId: selectedCourse && selectedCourse.departmentId !== newDeptId ? '' : f.courseId
+                      courseId: selectedCourse && String(selectedCourse.departmentId) !== String(newDeptId) ? '' : f.courseId
                     });
                   }}>
                   <option value="">Select Department</option>

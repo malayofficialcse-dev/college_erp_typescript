@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Employees from './pages/HR/Employees';
-import Students from './pages/Core/Students';
+import Students from './pages/Academics/Students';
 import Courses from './pages/Core/Courses';
 import Departments from './pages/Core/Departments';
 import Classrooms from './pages/Core/Classrooms';
@@ -40,9 +40,12 @@ import EventRegistrations from './pages/Communication/EventRegistrations';
 import Notifications from './pages/Communication/Notifications';
 import UserManagement from './pages/HR/UserManagement';
 import PaymentAnalysis from './pages/Finance/PaymentAnalysis';
-import Admissions from './pages/Core/Admissions';
-import AdmissionEmiSchedule from './pages/Core/AdmissionEmiSchedule';
-import Counseling from './pages/Core/Counseling';
+import Admissions from './pages/Academics/Admissions';
+import AdmissionEmiSchedule from './pages/Academics/AdmissionEmiSchedule';
+import Counseling from './pages/Academics/Counseling';
+import CoreStudents from './pages/Core/Students';
+import CoreAdmissions from './pages/Core/Admissions';
+import CoreCounseling from './pages/Core/Counseling';
 
 // Employee Centre
 import MyProfile from './pages/EmployeeCentre/MyProfile';
@@ -83,10 +86,10 @@ function App() {
               <Route path="semesters" element={<Semesters />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="exam-results" element={<ExamResults />} />
-              <Route path="core/admissions" element={<Admissions />} />
+              <Route path="core/admissions" element={<CoreAdmissions />} />
               <Route path="core/admissions/:id/emi" element={<AdmissionEmiSchedule />} />
-              <Route path="core/counseling" element={<Counseling />} />
-              <Route path="core/students" element={<Students />} />
+              <Route path="core/counseling" element={<CoreCounseling />} />
+              <Route path="core/students" element={<CoreStudents />} />
               <Route path="core/courses" element={<Courses />} />
               <Route path="core/departments" element={<Departments />} />
               <Route path="core/classrooms" element={<Classrooms />} />

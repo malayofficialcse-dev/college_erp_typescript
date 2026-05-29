@@ -40,6 +40,7 @@ const Layout = () => {
     if (path.startsWith('/attendance')) return 'academics';
     if (path.startsWith('/exam-schedules')) return 'academics';
     if (path.startsWith('/exam-results')) return 'academics';
+    if (path.startsWith('/admissions')) return 'academics';
     
     if (path.startsWith('/library')) return 'library';
     if (path.startsWith('/book-reservations')) return 'library';
@@ -73,11 +74,8 @@ const Layout = () => {
       icon: 'bi-mortarboard-fill',
       isGroup: true,
       items: [
-        { path: '/counseling', name: 'Counseling', icon: 'bi-headset' },
-        { path: '/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
         { path: '/academic-years', name: 'Academic Years', icon: 'bi-calendar-range' },
         { path: '/semesters', name: 'Semesters', icon: 'bi-list-ol' },
-        { path: '/students', name: 'Students', icon: 'bi-person-badge-fill' },
         { path: '/teachers', name: 'Teachers', icon: 'bi-person-workspace' },
         { path: '/courses', name: 'Courses', icon: 'bi-journal-bookmark-fill' },
         { path: '/subjects', name: 'Subjects', icon: 'bi-book-half' },
@@ -85,6 +83,16 @@ const Layout = () => {
         { path: '/attendance', name: 'Attendance', icon: 'bi-calendar-check-fill' },
         { path: '/exam-schedules', name: 'Exam Schedules', icon: 'bi-calendar-event' },
         { path: '/exam-results', name: 'Exam Results', icon: 'bi-award-fill' },
+      ]
+    },
+    {
+      title: 'Admission',
+      icon: 'bi-mortarboard-fill',
+      isGroup: true,
+      items: [
+        { path: '/counseling', name: 'Counseling', icon: 'bi-headset' },
+        { path: '/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
+        { path: '/students', name: 'Admitted Students', icon: 'bi-person-badge-fill' },
       ]
     },
     {
@@ -218,6 +226,7 @@ const Layout = () => {
     if (path.includes('subjects')) return 'Subject Management';
     if (path.includes('academic-years')) return 'Academic Years';
     if (path.includes('semesters')) return 'Semesters';
+    if (path.includes('admissions')) return 'Admissions';
     if (path.includes('attendance')) return 'Attendance Registry';
     if (path.includes('exam-results')) return 'Examination Results';
     if (path.includes('timetable')) return 'Class Timetable';

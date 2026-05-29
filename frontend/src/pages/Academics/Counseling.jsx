@@ -47,15 +47,23 @@ const Counseling = () => {
   const fetchCounselings = async () => {
     try {
       setLoading(true);
-      const activeParams = { page: currentPage, size: 10 };
-      if (searchParams.keyword) activeParams.keyword = searchParams.keyword;
+      const activeParams = {};
       if (searchParams.status) activeParams.status = searchParams.status;
       
-      const response = await api.get('/counseling/search', {
+      const response = await api.get('/counseling', {
         params: activeParams
       });
-      setCounselings(response.data.content || response.data || []);
-      setTotalPages(response.data.totalPages || 1);
+      const records = response.data.content || response.data || [];
+      const keyword = searchParams.keyword.trim().toLowerCase();
+      const filteredRecords = keyword
+        ? records.filter((item) =>
+            [item.firstName, item.lastName, item.email, item.phone]
+              .filter(Boolean)
+              .some((value) => String(value).toLowerCase().includes(keyword))
+          )
+        : records;
+      setCounselings(filteredRecords);
+      setTotalPages(1);
     } catch (error) {
       console.error('Error fetching counselings:', error);
       setAlert({ type: 'danger', msg: 'Failed to load counseling records.' });
@@ -84,7 +92,7 @@ const Counseling = () => {
       setIsEdit(true);
       setForm({
         ...counseling,
-        desiredCourseId: counseling.desiredCourse?.id || ''
+        desiredCourseId: counseling.desiredCourse?.id || counseling.desiredCourse || ''
       });
     } else {
       setIsEdit(false);
@@ -108,7 +116,7 @@ const Counseling = () => {
       setSubmitting(true);
       const payload = {
         ...form,
-        desiredCourse: form.desiredCourseId ? { id: parseInt(form.desiredCourseId) } : null
+        desiredCourse: form.desiredCourseId || undefined
       };
 
       if (isEdit) {
@@ -229,8 +237,8 @@ const Counseling = () => {
                         <div className="small fw-semibold">{item.email}</div>
                         <div className="small text-muted"><i className="bi bi-telephone-fill me-1"></i>{item.phone}</div>
                       </td>
-                      <td>{item.desiredCourse?.title || '—'}</td>
-                      <td>{item.counselorName || '—'}</td>
+                      <td>{item.desiredCourse?.title || item.desiredCourse?.name || '-'}</td>
+                      <td>{item.counselorName || '-'}</td>
                       <td>
                         <Badge bg={item.status === 'ADMITTED' ? 'success' : item.status === 'PENDING' ? 'warning' : 'danger'} className="rounded-pill px-3 py-2">
                           {item.status}
@@ -331,7 +339,11 @@ const Counseling = () => {
                   <Form.Label className="small fw-bold text-muted">Desired Course</Form.Label>
                   <Form.Select className="rounded-3" name="desiredCourseId" value={form.desiredCourseId} onChange={handleFormChange}>
                     <option value="">Select Course</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {[c.code || c.courseCode, c.name || c.title].filter(Boolean).join(' - ')}
+                      </option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
               </Col>
