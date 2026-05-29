@@ -8,12 +8,15 @@ export type FeePaymentMethod =
   | "CHEQUE"
   | "DD";
 
+export type FeeSource = "DIRECT" | "EMI" | "ADVANCE";
+
 export interface IFee extends Document {
   student: Types.ObjectId;
   feeType?: string;
   amount: number;
   discountAmount: number;
   fineAmount: number;
+  netAmount?: number;
   semester?: number;
   paymentDate?: Date;
   dueDate?: Date;
@@ -22,4 +25,7 @@ export interface IFee extends Document {
   receiptNumber?: string;
   status: FeeStatus;
   remarks?: string;
+  source?: FeeSource;
+  admissionId?: Types.ObjectId;
+  emiId?: Types.ObjectId;
 }

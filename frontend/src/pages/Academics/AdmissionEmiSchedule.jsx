@@ -46,18 +46,28 @@ const AdmissionEmiSchedule = () => {
   const [admission, setAdmission] = useState(null);
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedEmi, setSelectedEmi] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [alert, setAlert] = useState(null);
   const [payForm, setPayForm] = useState({
-    paidAmount: '', paidDate: new Date().toISOString().split('T')[0],
-    fineAmount: '0', paymentMethod: 'CASH',
-    transactionId: '', remarks: ''
+    paidAmount: '',
+    paidDate: new Date().toISOString().split('T')[0],
+    fineAmount: '0',
+    paymentMethod: 'CASH',
+    transactionId: '',
+    remarks: '',
+    chequeDetails: {
+      bankName: '',
+      holderName: '',
+      chequeNumber: '',
+      chequeDate: new Date().toISOString().split('T')[0]
+    }
   });
 
   const fetchEmis = async () => {
-    const emiRes = await api.get(`/admissions/emi/admission/${id}`);
+    const emiRes = await api.get(`/admissions/emi/admission/${id}`, { params: { _t: Date.now() } });
     return Array.isArray(emiRes.data) ? emiRes.data : [];
   };
 
@@ -96,17 +106,20 @@ const AdmissionEmiSchedule = () => {
     }
   };
 
-  const loadAll = async () => {
+  // Full load (shows spinner on first visit)
+  const loadAll = async (silent = false) => {
     try {
-      setLoading(true);
-      const admRes = await api.get(`/admissions/${id}`);
+      if (!silent) setLoading(true);
+      else setRefreshing(true);
+
+      const admRes = await api.get(`/admissions/${id}`, { params: { _t: Date.now() } });
       const admissionData = admRes.data;
       setAdmission(admissionData);
 
       try {
         let schedule = await fetchEmis();
 
-        if (admissionData?.paymentPlan === 'EMI' && schedule.length === 0) {
+        if (admissionData?.paymentPlan === 'EMI' && schedule.length === 0 && !silent) {
           schedule = await generateScheduleRecords(admissionData);
           if (schedule.length > 0) {
             setAlert({ type: 'success', msg: 'Installment schedule generated for this admission.' });
@@ -115,22 +128,37 @@ const AdmissionEmiSchedule = () => {
 
         setEmis(schedule);
       } catch {
-        setEmis([]);
-        setAlert({ type: 'warning', msg: 'Admission loaded, but EMI schedule records were not found.' });
+        if (!silent) {
+          setEmis([]);
+          setAlert({ type: 'warning', msg: 'Admission loaded, but EMI schedule records were not found.' });
+        }
       }
-    } catch { setAlert({ type: 'danger', msg: 'Failed to load admission details.' }); }
-    finally { setLoading(false); }
+    } catch {
+      if (!silent) setAlert({ type: 'danger', msg: 'Failed to load admission details.' });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { loadAll(); }, [id]);
 
   const openPayModal = (emi) => {
     setSelectedEmi(emi);
     const dueAmount = emi.emiAmount + (emi.fineAmount || 0) + (emi.carryOverAmount || 0);
     setPayForm({
-      paidAmount: dueAmount, paidDate: new Date().toISOString().split('T')[0],
-      fineAmount: emi.fineAmount || '0', paymentMethod: 'CASH', transactionId: '', remarks: ''
+      paidAmount: dueAmount,
+      paidDate: new Date().toISOString().split('T')[0],
+      fineAmount: emi.fineAmount || '0',
+      paymentMethod: 'CASH',
+      transactionId: '',
+      remarks: '',
+      chequeDetails: {
+        bankName: emi.chequeDetails?.bankName || '',
+        holderName: emi.chequeDetails?.holderName || (admission?.student ? `${admission.student.firstName} ${admission.student.lastName}` : ''),
+        chequeNumber: emi.chequeDetails?.chequeNumber || '',
+        chequeDate: emi.chequeDetails?.chequeDate ? toDateInput(emi.chequeDetails.chequeDate) : new Date().toISOString().split('T')[0]
+      }
     });
     setShowPayModal(true);
   };
@@ -157,7 +185,7 @@ const AdmissionEmiSchedule = () => {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await api.patch(`/admissions/emi/${selectedEmi.id}/payment`, {
+      const payload = {
         status: 'PAID',
         paidAmount: parseFloat(payForm.paidAmount),
         paidDate: payForm.paidDate,
@@ -165,12 +193,22 @@ const AdmissionEmiSchedule = () => {
         paymentMethod: payForm.paymentMethod,
         transactionId: payForm.transactionId,
         remarks: payForm.remarks,
-      });
+      };
+
+      if (payForm.paymentMethod === 'CHEQUE') {
+        payload.chequeDetails = payForm.chequeDetails;
+      }
+
+      await api.patch(`/admissions/emi/${selectedEmi.id}/payment`, payload);
       setAlert({ type: 'success', msg: `EMI #${selectedEmi.emiNumber} marked as PAID!` });
       setShowPayModal(false);
-      loadAll();
-    } catch (error) { setAlert({ type: 'danger', msg: error.response?.data?.message || 'Failed to record EMI payment.' }); }
-    finally { setSubmitting(false); }
+      // Silent refresh — no spinner, cards update in-place
+      await loadAll(true);
+    } catch (error) {
+      setAlert({ type: 'danger', msg: error.response?.data?.message || 'Failed to record EMI payment.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const printReceipt = (emi) => {
@@ -205,7 +243,10 @@ const AdmissionEmiSchedule = () => {
             <tr class="table-light fw-bold"><td>Total Paid</td><td class="text-end">₹${emi.paidAmount}</td></tr>
           </table>
           <div class="row mt-4">
-            <div class="col-6"><b>Method:</b> ${emi.paymentMethod || '—'}<br><b>Txn ID:</b> ${emi.transactionId || '—'}</div>
+            <div class="col-6">
+              <b>Method:</b> ${emi.paymentMethod || '—'}<br>
+              ${emi.paymentMethod === 'CHEQUE' ? `<b>Cheque #:</b> ${emi.chequeDetails?.chequeNumber || emi.transactionId || '—'}<br><b>Bank:</b> ${emi.chequeDetails?.bankName || '—'}` : `<b>Txn ID:</b> ${emi.transactionId || '—'}`}
+            </div>
             <div class="col-6 text-end mt-5"><p>______________________</p><small>Authorized Signature</small></div>
           </div>
         </div>
@@ -217,7 +258,15 @@ const AdmissionEmiSchedule = () => {
 
   if (loading) return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>;
 
-  const paid = emis.filter(e => e.status === 'PAID').length;
+  // Use server-maintained values directly — the backend updates these atomically on every EMI payment.
+  // Fall back to EMI-derived sum only when admission.amountPaid hasn't synced yet (e.g. first page load).
+  const emiAmountPaid = emis.filter(e => e.status === 'PAID').reduce((sum, e) => sum + Number(e.paidAmount || 0), 0);
+  const displayAmountPaid = Math.max(Number(admission?.amountPaid || 0), emiAmountPaid);
+  const displayBalanceDue  = Number(admission?.balanceDue) >= 0
+    ? Number(admission.balanceDue)
+    : Math.max(Number(admission?.netPayableAmount || 0) - displayAmountPaid, 0);
+
+  const paid    = emis.filter(e => e.status === 'PAID').length;
   const pending = emis.filter(e => ['PENDING', 'PARTIAL'].includes(e.status)).length;
   const overdue = emis.filter(e => e.status === 'OVERDUE').length;
 
@@ -241,9 +290,9 @@ const AdmissionEmiSchedule = () => {
         <Row className="g-3 mb-4">
           {[
             { label: 'Student', val: `${admission.student?.firstName} ${admission.student?.lastName}`, sub: admission.student?.enrollmentNumber, icon: 'bi-person-fill', color: '#4318FF' },
-            { label: 'Course', val: admission.course?.title, sub: admission.department?.name || '—', icon: 'bi-book-fill', color: '#10b981' },
+            { label: 'Course', val: admission.course?.title || admission.course?.name, sub: admission.department?.name || '—', icon: 'bi-book-fill', color: '#10b981' },
             { label: 'Net Payable', val: `₹${Number(admission.netPayableAmount || 0).toLocaleString()}`, sub: `Advance: ₹${Number(admission.advanceAmount || 0).toLocaleString()}`, icon: 'bi-receipt', color: '#3b82f6' },
-            { label: 'Balance Due', val: `₹${Number(admission.balanceDue || 0).toLocaleString()}`, sub: `Paid: ₹${Number(admission.amountPaid || 0).toLocaleString()}`, icon: 'bi-wallet2', color: Number(admission.balanceDue) > 0 ? '#ef4444' : '#10b981' },
+            { label: 'Balance Due', val: `₹${displayBalanceDue.toLocaleString()}`, sub: `Paid: ₹${displayAmountPaid.toLocaleString()}`, icon: 'bi-wallet2', color: displayBalanceDue > 0 ? '#ef4444' : '#10b981' },
           ].map(k => (
             <Col md={3} key={k.label}>
               <Card className="border-0 shadow-sm rounded-4 h-100">
@@ -253,7 +302,12 @@ const AdmissionEmiSchedule = () => {
                     <i className={`bi ${k.icon} fs-5`} style={{ color: k.color }}></i>
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div className="fw-bold text-dark text-truncate">{k.val}</div>
+                    <div className="fw-bold text-dark text-truncate">
+                      {k.val}
+                      {refreshing && k.label === 'Balance Due' && (
+                        <Spinner animation="border" size="sm" className="ms-2 opacity-50" style={{ width: 12, height: 12 }} />
+                      )}
+                    </div>
                     <div className="text-muted small">{k.sub}</div>
                     <div className="text-muted" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</div>
                   </div>
@@ -310,7 +364,7 @@ const AdmissionEmiSchedule = () => {
                   <th>Paid Amount</th>
                   <th>Paid Date</th>
                   <th>Method</th>
-                  <th>Txn ID</th>
+                  <th>Txn ID / Cheque #</th>
                   <th>Status</th>
                   <th className="text-end px-4">Actions</th>
                 </tr>
@@ -319,11 +373,11 @@ const AdmissionEmiSchedule = () => {
                 {emis.map(emi => (
                   <tr key={emi.id}>
                     <td className="px-4 fw-bold text-primary">EMI {emi.emiNumber}</td>
-                    <td>{emi.dueDate}</td>
+                    <td>{toDateInput(emi.dueDate)}</td>
                     <td className="fw-semibold">₹{Number(emi.emiAmount).toLocaleString()}</td>
                     <td className="text-danger">{emi.fineAmount > 0 ? `₹${emi.fineAmount}` : '—'}</td>
                     <td className="text-success fw-semibold">{emi.paidAmount ? `₹${Number(emi.paidAmount).toLocaleString()}` : '—'}</td>
-                    <td>{emi.paidDate || '—'}</td>
+                    <td>{emi.paidDate ? toDateInput(emi.paidDate) : '—'}</td>
                     <td>
                       {emi.paymentMethod ? (
                         <span className="d-flex align-items-center gap-1">
@@ -332,7 +386,16 @@ const AdmissionEmiSchedule = () => {
                         </span>
                       ) : '—'}
                     </td>
-                    <td><code>{emi.transactionId || '—'}</code></td>
+                    <td>
+                      {emi.paymentMethod === 'CHEQUE' ? (
+                        <div style={{ fontSize: '0.85rem' }}>
+                          <span className="fw-bold">{emi.chequeDetails?.chequeNumber || emi.transactionId || '—'}</span>
+                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>{emi.chequeDetails?.bankName}</div>
+                        </div>
+                      ) : (
+                        <code>{emi.transactionId || '—'}</code>
+                      )}
+                    </td>
                     <td>
                       <Badge bg={STATUS_COLOR[emi.status] || 'secondary'} className="rounded-pill px-3">
                         {emi.status}
@@ -382,7 +445,7 @@ const AdmissionEmiSchedule = () => {
       )}
 
       {/* Pay EMI Modal */}
-      <Modal show={showPayModal} onHide={() => setShowPayModal(false)} centered>
+      <Modal show={showPayModal} onHide={() => setShowPayModal(false)} centered size="lg">
         <Modal.Header closeButton className="border-0 bg-light">
           <Modal.Title className="fw-bold">
             Record EMI #{selectedEmi?.emiNumber} Payment
@@ -417,11 +480,42 @@ const AdmissionEmiSchedule = () => {
                   <option value="DD">Demand Draft</option>
                 </Form.Select>
               </Col>
-              <Col md={12}>
-                <Form.Label className="small fw-bold text-muted">Transaction / Reference ID</Form.Label>
-                <Form.Control className="rounded-3" placeholder="UPI Txn / Cheque / DD Number"
-                  value={payForm.transactionId} onChange={e => setPayForm({ ...payForm, transactionId: e.target.value })} />
-              </Col>
+
+              {payForm.paymentMethod === 'CHEQUE' ? (
+                <>
+                  <Col md={6}>
+                    <Form.Label className="small fw-bold text-muted">Bank Name *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={payForm.chequeDetails.bankName}
+                      onChange={e => setPayForm({ ...payForm, chequeDetails: { ...payForm.chequeDetails, bankName: e.target.value } })} />
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label className="small fw-bold text-muted">Cheque Number *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={payForm.chequeDetails.chequeNumber}
+                      onChange={e => setPayForm({ ...payForm, chequeDetails: { ...payForm.chequeDetails, chequeNumber: e.target.value } })} />
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label className="small fw-bold text-muted">Holder Name *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={payForm.chequeDetails.holderName}
+                      onChange={e => setPayForm({ ...payForm, chequeDetails: { ...payForm.chequeDetails, holderName: e.target.value } })} />
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label className="small fw-bold text-muted">Cheque Date *</Form.Label>
+                    <Form.Control type="date" className="rounded-3" required
+                      value={payForm.chequeDetails.chequeDate}
+                      onChange={e => setPayForm({ ...payForm, chequeDetails: { ...payForm.chequeDetails, chequeDate: e.target.value } })} />
+                  </Col>
+                </>
+              ) : (
+                <Col md={12}>
+                  <Form.Label className="small fw-bold text-muted">Transaction / Reference ID</Form.Label>
+                  <Form.Control className="rounded-3" placeholder="UPI Txn / Ref Number"
+                    value={payForm.transactionId} onChange={e => setPayForm({ ...payForm, transactionId: e.target.value })} />
+                </Col>
+              )}
+
               <Col md={12}>
                 <Form.Label className="small fw-bold text-muted">Remarks</Form.Label>
                 <Form.Control as="textarea" rows={2} className="rounded-3"

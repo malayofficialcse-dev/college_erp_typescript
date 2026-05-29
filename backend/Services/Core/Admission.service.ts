@@ -1,5 +1,5 @@
 import Admission from "../../Models/Core/Admission.ts";
-import type { AdmissionStatus, PaymentPlan } from "../../Interfaces/Core/index.ts";
+import type { AdmissionStatus, PaymentPlan, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
 import { generateEmiScheduleForAdmissionService } from "./AdmissionEmi.service.ts";
 
 export interface ICreateAdmissionInput {
@@ -21,6 +21,8 @@ export interface ICreateAdmissionInput {
   advancePaymentDate?: Date;
   advancePaymentMethod?: string;
   advanceTransactionId?: string;
+  advanceChequeDetails?: ChequeDetails;
+  advanceBankTransferDetails?: BankTransferDetails;
   status?: AdmissionStatus;
   remarks?: string;
 }
@@ -91,4 +93,27 @@ export const deleteAdmissionService = async (id: string) => {
   const admission = await Admission.findByIdAndDelete(id);
   if (!admission) throw new Error("Admission not found");
   return admission;
+};
+
+export const getAdmissionStatsService = async () => {
+  const stats = await Admission.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalAdmissions: { $sum: 1 },
+        totalAmountPaid: { $sum: "$amountPaid" },
+        totalBalanceDue: { $sum: "$balanceDue" },
+        totalNetPayable: { $sum: "$netPayableAmount" },
+      }
+    }
+  ]);
+
+  const defaultStats = {
+    totalAdmissions: 0,
+    totalAmountPaid: 0,
+    totalBalanceDue: 0,
+    totalNetPayable: 0
+  };
+
+  return stats.length > 0 ? stats[0] : defaultStats;
 };

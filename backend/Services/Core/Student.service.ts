@@ -36,22 +36,68 @@ export const getAllStudentsService = async (filter: {
   section?: string;
   academicYear?: string;
   status?: string;
-  currentSemester?: number;
+  gender?: string;
+  currentSemester?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
 }) => {
   const query: Record<string, unknown> = {};
-  if (filter.department) query.department = filter.department;
+
+  // Multi-value comma-separated support
+  if (filter.department) {
+    const ids = filter.department.split(',').map(s => s.trim()).filter(Boolean);
+    query.department = ids.length === 1 ? ids[0] : { $in: ids };
+  }
   if (filter.course) query.course = filter.course;
   if (filter.section) query.section = filter.section;
   if (filter.academicYear) query.academicYear = filter.academicYear;
-  if (filter.status) query.status = filter.status;
-  if (filter.currentSemester) query.currentSemester = filter.currentSemester;
 
-  return Student.find(query)
-    .populate("department", "name code")
-    .populate("course", "name code")
-    .populate("section", "name code")
-    .populate("academicYear", "name")
-    .sort({ enrollmentNumber: 1 });
+  if (filter.status) {
+    const vals = filter.status.split(',').map(s => s.trim()).filter(Boolean);
+    query.status = vals.length === 1 ? vals[0] : { $in: vals };
+  }
+  if (filter.gender) {
+    const vals = filter.gender.split(',').map(s => s.trim()).filter(Boolean);
+    query.gender = vals.length === 1 ? vals[0] : { $in: vals };
+  }
+  if (filter.currentSemester) {
+    const semStr = String(filter.currentSemester);
+    const sems = semStr.split(',').map(Number).filter(Boolean);
+    query.currentSemester = sems.length === 1 ? sems[0] : { $in: sems };
+  }
+  if (filter.keyword) {
+    const rx = { $regex: filter.keyword, $options: 'i' };
+    query.$or = [
+      { firstName: rx }, { lastName: rx },
+      { email: rx },     { enrollmentNumber: rx },
+      { phone: rx },
+    ];
+  }
+
+  const page = Math.max((filter.page ?? 0), 0);
+  const size = Math.min(filter.size ?? 15, 1000);
+  const skip = page * size;
+
+  const [students, total] = await Promise.all([
+    Student.find(query)
+      .populate("department", "name code")
+      .populate("course", "name code")
+      .populate("section", "name code")
+      .populate("academicYear", "name")
+      .sort({ enrollmentNumber: 1 })
+      .skip(skip)
+      .limit(size),
+    Student.countDocuments(query),
+  ]);
+
+  return {
+    content: students,
+    total,
+    page,
+    size,
+    totalPages: Math.ceil(total / size),
+  };
 };
 
 export const getStudentByIdService = async (id: string) => {

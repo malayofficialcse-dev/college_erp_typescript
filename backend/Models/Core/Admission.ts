@@ -44,6 +44,18 @@ const admissionSchema = new Schema<IAdmission>(
       enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD", "DD"],
     },
     advanceTransactionId: { type: String, trim: true },
+    advanceChequeDetails: {
+      bankName: { type: String, trim: true },
+      holderName: { type: String, trim: true },
+      chequeNumber: { type: String, trim: true },
+      chequeDate: { type: Date },
+    },
+    advanceBankTransferDetails: {
+      bankName: { type: String, trim: true },
+      accountHolder: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      ifscCode: { type: String, trim: true },
+    },
     paymentPlan: {
       type: String,
       enum: ["FULL", "EMI"],

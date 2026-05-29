@@ -5,7 +5,17 @@ import {
   getAdmissionByIdService,
   updateAdmissionService,
   deleteAdmissionService,
+  getAdmissionStatsService,
 } from "../../Services/Core/Admission.service.ts";
+
+export const getAdmissionStats = async (req: Request, res: Response) => {
+  try {
+    const stats = await getAdmissionStatsService();
+    res.status(200).json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 export const createAdmission = async (req: Request, res: Response) => {
   try {

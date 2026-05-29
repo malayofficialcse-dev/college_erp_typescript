@@ -1,4 +1,5 @@
 import { Document, Types } from "mongoose";
+import type { ChequeDetails, BankTransferDetails } from "./AdmissionEmi.ts";
 
 export type PaymentPlan = "FULL" | "EMI";
 export type AdmissionStatus =
@@ -26,6 +27,8 @@ export interface IAdmission extends Document {
   advancePaymentDate?: Date;
   advancePaymentMethod?: string;
   advanceTransactionId?: string;
+  advanceChequeDetails?: ChequeDetails;
+  advanceBankTransferDetails?: BankTransferDetails;
   status: AdmissionStatus;
   remarks?: string;
 }

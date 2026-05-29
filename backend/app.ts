@@ -28,6 +28,7 @@ import examScheduleRoutes from "./routes/Core/examSchedule.route.ts";
 import timetableRoutes from "./routes/Core/timetable.route.ts";
 import subjectAssignmentRoutes from "./routes/Core/subjectAssignment.route.ts";
 import counselingRoutes from "./routes/Core/counseling.route.ts";
+import feeRoutes from "./routes/Core/fee.route.ts";
 
 import cors from "cors";
 
@@ -86,6 +87,8 @@ app.use("/api/v1/subject-assignments", subjectAssignmentRoutes);
 app.use("/api/v1/core/subject-assignments", subjectAssignmentRoutes);
 app.use("/api/v1/counseling", counselingRoutes);
 app.use("/api/v1/core/counseling", counselingRoutes);
+app.use("/api/v1/fees", feeRoutes);
+app.use("/api/v1/finance/fees", feeRoutes);
 
 // HR module
 app.use("/api/v1/hr/employees", employeeRoutes);

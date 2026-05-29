@@ -28,7 +28,13 @@ const Admissions = () => {
     paymentPlan: 'FULL', numberOfEmis: '',
     advanceAmount: '0', advancePaymentDate: new Date().toISOString().split('T')[0],
     advancePaymentMethod: 'CASH', advanceTransactionId: '',
-    status: 'ACTIVE', remarks: ''
+    status: 'ACTIVE', remarks: '',
+    advanceChequeDetails: {
+      bankName: '',
+      holderName: '',
+      chequeNumber: '',
+      chequeDate: new Date().toISOString().split('T')[0]
+    }
   });
 
   const normalizeCourse = (course) => ({
@@ -71,6 +77,10 @@ const Admissions = () => {
           courseId: selectedCourse?.id || '',
           departmentId: selectedCourse?.departmentId || '',
           totalFeeAmount: selectedCourse?.totalFeeAmount || prev.totalFeeAmount,
+          advanceChequeDetails: {
+            ...prev.advanceChequeDetails,
+            holderName: `${counselingData.firstName} ${counselingData.lastName}`
+          }
         }));
         setShowModal(true);
       }
@@ -78,7 +88,6 @@ const Admissions = () => {
     finally { setLoading(false); }
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { loadData(); }, [filters]);
 
   const f = form;
@@ -94,7 +103,6 @@ const Admissions = () => {
       
       let targetStudentId = f.studentId;
       
-      // If coming from counseling and student not selected, auto-create student
       if (isFromCounseling && !targetStudentId) {
         const existingStudent = students.find(student => student.email === counselingData.email);
 
@@ -132,7 +140,7 @@ const Admissions = () => {
       const amountPaid = parseFloat(f.advanceAmount || 0);
       const netPayableAmount = Math.max(totalFeeAmount - discountAmount, 0);
 
-      await api.post('/admissions', {
+      const admissionPayload = {
         admissionNumber: 'ADM' + Date.now().toString().slice(-8),
         billNumber: 'BILL' + Date.now().toString().slice(-8),
         student: targetStudentId,
@@ -151,10 +159,15 @@ const Admissions = () => {
         paymentPlan: f.paymentPlan,
         numberOfEmis: f.paymentPlan === 'EMI' ? parseInt(f.numberOfEmis) : undefined,
         status: f.status, remarks: f.remarks,
-      });
+      };
+
+      if (f.advancePaymentMethod === 'CHEQUE') {
+        admissionPayload.advanceChequeDetails = f.advanceChequeDetails;
+      }
+
+      await api.post('/admissions', admissionPayload);
       setAlert({ type: 'success', msg: 'Admission created successfully!' });
       setShowModal(false);
-      // Clear location state
       navigate('/admissions', { replace: true });
       loadData();
     } catch { setAlert({ type: 'danger', msg: 'Failed to create admission.' }); }
@@ -166,7 +179,13 @@ const Admissions = () => {
     academicYear: '', admissionDate: new Date().toISOString().split('T')[0],
     totalFeeAmount: '', discountAmount: '0', paymentPlan: 'FULL', numberOfEmis: '',
     advanceAmount: '0', advancePaymentDate: new Date().toISOString().split('T')[0],
-    advancePaymentMethod: 'CASH', advanceTransactionId: '', status: 'ACTIVE', remarks: ''
+    advancePaymentMethod: 'CASH', advanceTransactionId: '', status: 'ACTIVE', remarks: '',
+    advanceChequeDetails: {
+      bankName: '',
+      holderName: '',
+      chequeNumber: '',
+      chequeDate: new Date().toISOString().split('T')[0]
+    }
   });
 
   return (
@@ -251,7 +270,7 @@ const Admissions = () => {
                   <tr key={a.id}>
                     <td className="px-4">
                       <div className="fw-bold text-primary">{a.admissionNumber}</div>
-                      <small className="text-muted">{a.admissionDate}</small>
+                      <small className="text-muted">{new Date(a.admissionDate).toLocaleDateString()}</small>
                     </td>
                     <td>
                       <div className="fw-medium text-dark">{a.billNumber || '—'}</div>
@@ -288,7 +307,7 @@ const Admissions = () => {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="10" className="text-center py-5 text-muted">
+                    <td colSpan="11" className="text-center py-5 text-muted">
                       <i className="bi bi-mortarboard fs-2 d-block mb-2"></i>No admissions found.
                     </td>
                   </tr>
@@ -356,11 +375,9 @@ const Admissions = () => {
                 <Form.Select className="rounded-3" value={f.departmentId}
                   onChange={e => {
                     const newDeptId = e.target.value;
-                    const selectedCourse = courses.find(c => String(c.id) === String(f.courseId));
                     setForm({
                       ...f,
                       departmentId: newDeptId,
-                      courseId: selectedCourse && String(selectedCourse.departmentId) !== String(newDeptId) ? '' : f.courseId
                     });
                   }}>
                   <option value="">Select Department</option>
@@ -455,11 +472,36 @@ const Admissions = () => {
                   <option value="DD">Demand Draft</option>
                 </Form.Select>
               </Col>
-              <Col md={3}>
-                <Form.Label className="small fw-bold text-muted">Advance Txn / Ref ID</Form.Label>
-                <Form.Control className="rounded-3" placeholder="Txn / Cheque / DD No."
-                  value={f.advanceTransactionId} onChange={e => setForm({ ...f, advanceTransactionId: e.target.value })} />
-              </Col>
+
+              {f.advancePaymentMethod === 'CHEQUE' ? (
+                <>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold text-muted">Bank Name *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={f.advanceChequeDetails.bankName}
+                      onChange={e => setForm({ ...f, advanceChequeDetails: { ...f.advanceChequeDetails, bankName: e.target.value } })} />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold text-muted">Cheque Number *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={f.advanceChequeDetails.chequeNumber}
+                      onChange={e => setForm({ ...f, advanceChequeDetails: { ...f.advanceChequeDetails, chequeNumber: e.target.value } })} />
+                  </Col>
+                  <Col md={3}>
+                    <Form.Label className="small fw-bold text-muted">Holder Name *</Form.Label>
+                    <Form.Control className="rounded-3" required
+                      value={f.advanceChequeDetails.holderName}
+                      onChange={e => setForm({ ...f, advanceChequeDetails: { ...f.advanceChequeDetails, holderName: e.target.value } })} />
+                  </Col>
+                </>
+              ) : (
+                <Col md={6}>
+                  <Form.Label className="small fw-bold text-muted">Advance Txn / Ref ID</Form.Label>
+                  <Form.Control className="rounded-3" placeholder="Txn / Ref No."
+                    value={f.advanceTransactionId} onChange={e => setForm({ ...f, advanceTransactionId: e.target.value })} />
+                </Col>
+              )}
+
               <Col md={6}>
                 <Form.Label className="small fw-bold text-muted">Remarks</Form.Label>
                 <Form.Control as="textarea" rows={2} className="rounded-3"

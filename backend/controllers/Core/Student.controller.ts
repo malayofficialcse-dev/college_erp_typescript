@@ -18,10 +18,28 @@ export const createStudent = async (req: Request, res: Response) => {
 
 export const getAllStudents = async (req: Request, res: Response) => {
   try {
-    const { department, course, section, academicYear, status } = req.query as Record<string, string>;
-    const currentSemester = req.query.currentSemester ? Number(req.query.currentSemester) : undefined;
-    const students = await getAllStudentsService({ department, course, section, academicYear, status, currentSemester });
-    res.status(200).json({ success: true, count: students.length, data: students });
+    const {
+      department, course, section, academicYear,
+      status, gender, keyword, semester,
+    } = req.query as Record<string, string>;
+    const page = req.query.page ? Number(req.query.page) : 0;
+    const size = req.query.size ? Number(req.query.size) : 15;
+    const currentSemester = semester || (req.query.currentSemester as string) || undefined;
+
+    const result = await getAllStudentsService({
+      department, course, section, academicYear,
+      status, gender, keyword,
+      currentSemester: currentSemester,
+      page, size,
+    });
+    res.status(200).json({
+      success: true,
+      count: result.content.length,
+      total: result.total,
+      totalPages: result.totalPages,
+      page: result.page,
+      data: result.content,
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
