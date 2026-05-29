@@ -37,6 +37,13 @@ const admissionSchema = new Schema<IAdmission>(
     netPayableAmount: { type: Number, required: true, min: 0 },
     amountPaid: { type: Number, default: 0, min: 0 },
     balanceDue: { type: Number, default: 0, min: 0 },
+    advanceAmount: { type: Number, default: 0, min: 0 },
+    advancePaymentDate: { type: Date },
+    advancePaymentMethod: {
+      type: String,
+      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD", "DD"],
+    },
+    advanceTransactionId: { type: String, trim: true },
     paymentPlan: {
       type: String,
       enum: ["FULL", "EMI"],

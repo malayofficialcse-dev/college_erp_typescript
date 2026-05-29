@@ -1,7 +1,7 @@
 import { Document, Types } from "mongoose";
 
 export type EmiStatus = "PENDING" | "PAID" | "OVERDUE" | "WAIVED" | "PARTIAL";
-export type PaymentMethod = "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE" | "CARD";
+export type PaymentMethod = "CASH" | "UPI" | "BANK_TRANSFER" | "CHEQUE" | "CARD" | "DD";
 
 export interface ChequeDetails {
   bankName: string;

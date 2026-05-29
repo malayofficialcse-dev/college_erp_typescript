@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createAdmissionEmi,
+  generateAdmissionEmiSchedule,
   getEmisByAdmission,
   getAllEmis,
   getEmiById,
@@ -11,6 +12,7 @@ import {
 const router = express.Router();
 
 router.post("/", createAdmissionEmi);
+router.post("/admission/:admissionId/generate", generateAdmissionEmiSchedule);
 router.get("/admission/:admissionId", getEmisByAdmission);
 router.get("/", getAllEmis);
 router.get("/:id", getEmiById);

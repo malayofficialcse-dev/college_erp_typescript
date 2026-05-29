@@ -27,4 +27,6 @@ export type {
   IAdmissionEmi,
   EmiStatus,
   PaymentMethod,
+  ChequeDetails,
+  BankTransferDetails,
 } from "./AdmissionEmi.ts";

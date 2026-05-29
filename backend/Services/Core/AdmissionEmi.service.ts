@@ -1,4 +1,5 @@
 import AdmissionEmi from "../../Models/Core/AdmissionEmi.ts";
+import Admission from "../../Models/Core/Admission.ts";
 import type { EmiStatus, PaymentMethod, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
 
 export interface ICreateAdmissionEmiInput {
@@ -84,6 +85,52 @@ export const createAdmissionEmiService = async (
   return AdmissionEmi.create(data);
 };
 
+const addMonths = (date: Date, months: number) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+};
+
+export const generateEmiScheduleForAdmissionService = async (admissionId: string) => {
+  const admission = await Admission.findById(admissionId);
+  if (!admission) throw new Error("Admission not found");
+  if (admission.paymentPlan !== "EMI") throw new Error("Admission is not configured for EMI payments");
+
+  const numberOfEmis = Number(admission.numberOfEmis || 0);
+  if (!numberOfEmis || numberOfEmis < 1) {
+    throw new Error("Number of EMIs is required to generate installment schedule");
+  }
+
+  const existing = await AdmissionEmi.find({ admission: admission._id }).sort({ emiNumber: 1 });
+  const existingNumbers = new Set(existing.map((emi) => emi.emiNumber));
+  const balanceDue = Math.max(Number(admission.balanceDue || 0), 0);
+  const baseAmount = Math.floor((balanceDue / numberOfEmis) * 100) / 100;
+  const created = [];
+
+  for (let emiNumber = 1; emiNumber <= numberOfEmis; emiNumber += 1) {
+    if (existingNumbers.has(emiNumber)) continue;
+
+    const isLast = emiNumber === numberOfEmis;
+    const emiAmount = isLast
+      ? Math.round((balanceDue - baseAmount * (numberOfEmis - 1)) * 100) / 100
+      : baseAmount;
+
+    created.push({
+      admission: admission._id.toString(),
+      emiNumber,
+      emiAmount,
+      dueDate: addMonths(new Date(admission.admissionDate || new Date()), emiNumber),
+      status: "PENDING" as EmiStatus,
+    });
+  }
+
+  if (created.length > 0) {
+    await AdmissionEmi.insertMany(created, { ordered: false });
+  }
+
+  return getEmisByAdmissionService(admissionId);
+};
+
 export const getEmisByAdmissionService = async (admissionId: string) => {
   return AdmissionEmi.find({ admission: admissionId })
     .populate("admission", "admissionNumber student")
@@ -135,6 +182,7 @@ export const updateEmiPaymentService = async (
 ) => {
   const emi = await AdmissionEmi.findById(id);
   if (!emi) throw new Error("EMI record not found");
+  const previousPaidAmount = Number(emi.paidAmount || 0);
 
   if (data.paymentMethod) {
     const validation = validatePaymentMethod(data.paymentMethod, data);
@@ -175,6 +223,20 @@ export const updateEmiPaymentService = async (
   }).populate("admission", "admissionNumber student");
 
   if (!updatedEmi) throw new Error("EMI record not found");
+
+  const nextPaidAmount = Number(updatedEmi.paidAmount || 0);
+  const paidDelta = nextPaidAmount - previousPaidAmount;
+  if (paidDelta !== 0) {
+    await Admission.findByIdAndUpdate(emi.admission, [
+      {
+        $set: {
+          amountPaid: { $max: [{ $add: ["$amountPaid", paidDelta] }, 0] },
+          balanceDue: { $max: [{ $subtract: ["$balanceDue", paidDelta] }, 0] },
+        },
+      },
+    ]);
+  }
+
   return updatedEmi;
 };
 

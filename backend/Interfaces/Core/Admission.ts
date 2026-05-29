@@ -22,6 +22,10 @@ export interface IAdmission extends Document {
   balanceDue: number;
   paymentPlan: PaymentPlan;
   numberOfEmis?: number;
+  advanceAmount?: number;
+  advancePaymentDate?: Date;
+  advancePaymentMethod?: string;
+  advanceTransactionId?: string;
   status: AdmissionStatus;
   remarks?: string;
 }

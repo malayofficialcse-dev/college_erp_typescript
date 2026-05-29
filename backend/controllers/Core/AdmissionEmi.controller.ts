@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   createAdmissionEmiService,
+  generateEmiScheduleForAdmissionService,
   getEmisByAdmissionService,
   getAllEmisService,
   getEmiByIdService,
@@ -19,9 +20,20 @@ export const createAdmissionEmi = async (req: Request, res: Response) => {
   }
 };
 
+export const generateAdmissionEmiSchedule = async (req: Request, res: Response) => {
+  try {
+    const admissionId = String(req.params.admissionId || "");
+    if (!admissionId) return res.status(400).json({ success: false, message: "Admission id is required" });
+    const emis = await generateEmiScheduleForAdmissionService(admissionId);
+    res.status(200).json({ success: true, message: "EMI schedule generated successfully", count: emis.length, data: emis });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 export const getEmisByAdmission = async (req: Request, res: Response) => {
   try {
-    const { admissionId } = req.params;
+    const admissionId = String(req.params.admissionId || "");
     if (!admissionId) return res.status(400).json({ success: false, message: "Admission id is required" });
     const emis = await getEmisByAdmissionService(admissionId);
     res.status(200).json({ success: true, count: emis.length, data: emis });
@@ -42,7 +54,7 @@ export const getAllEmis = async (req: Request, res: Response) => {
 
 export const getEmiById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || "");
     if (!id) return res.status(400).json({ success: false, message: "EMI id is required" });
     const emi = await getEmiByIdService(id);
     if (!emi) return res.status(404).json({ success: false, message: "EMI record not found" });
@@ -54,7 +66,7 @@ export const getEmiById = async (req: Request, res: Response) => {
 
 export const updateEmiPayment = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || "");
     if (!id) return res.status(400).json({ success: false, message: "EMI id is required" });
 
     const paymentData: IUpdatePaymentInput = req.body;
@@ -75,7 +87,7 @@ export const updateEmiPayment = async (req: Request, res: Response) => {
 
 export const deleteEmi = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || "");
     if (!id) return res.status(400).json({ success: false, message: "EMI id is required" });
     await deleteEmiService(id);
     res.status(200).json({ success: true, message: "EMI record deleted successfully" });

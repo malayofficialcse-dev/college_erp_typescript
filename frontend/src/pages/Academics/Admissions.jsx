@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Table, Button, Modal, Form, Row, Col, Badge, Card, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
@@ -30,8 +30,6 @@ const Admissions = () => {
     advancePaymentMethod: 'CASH', advanceTransactionId: '',
     status: 'ACTIVE', remarks: ''
   });
-
-  useEffect(() => { loadData(); }, [filters]);
 
   const normalizeCourse = (course) => ({
     ...course,
@@ -79,6 +77,9 @@ const Admissions = () => {
     } catch { setAlert({ type: 'danger', msg: 'Failed to load data.' }); }
     finally { setLoading(false); }
   };
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { loadData(); }, [filters]);
 
   const f = form;
   const filteredCourses = f.departmentId
@@ -143,6 +144,10 @@ const Admissions = () => {
         netPayableAmount,
         amountPaid,
         balanceDue: Math.max(netPayableAmount - amountPaid, 0),
+        advanceAmount: amountPaid,
+        advancePaymentDate: f.advancePaymentDate,
+        advancePaymentMethod: f.advancePaymentMethod,
+        advanceTransactionId: f.advanceTransactionId,
         paymentPlan: f.paymentPlan,
         numberOfEmis: f.paymentPlan === 'EMI' ? parseInt(f.numberOfEmis) : undefined,
         status: f.status, remarks: f.remarks,

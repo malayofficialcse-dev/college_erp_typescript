@@ -1,5 +1,6 @@
 import Admission from "../../Models/Core/Admission.ts";
 import type { AdmissionStatus, PaymentPlan } from "../../Interfaces/Core/index.ts";
+import { generateEmiScheduleForAdmissionService } from "./AdmissionEmi.service.ts";
 
 export interface ICreateAdmissionInput {
   admissionNumber: string;
@@ -16,6 +17,10 @@ export interface ICreateAdmissionInput {
   balanceDue: number;
   paymentPlan: PaymentPlan;
   numberOfEmis?: number;
+  advanceAmount?: number;
+  advancePaymentDate?: Date;
+  advancePaymentMethod?: string;
+  advanceTransactionId?: string;
   status?: AdmissionStatus;
   remarks?: string;
 }
@@ -30,7 +35,13 @@ export const createAdmissionService = async (data: ICreateAdmissionInput) => {
   if (existing) {
     throw new Error("Admission already exists for this student in the given course/academic year");
   }
-  return Admission.create(data);
+  const admission = await Admission.create(data);
+
+  if (admission.paymentPlan === "EMI") {
+    await generateEmiScheduleForAdmissionService(admission._id.toString());
+  }
+
+  return admission;
 };
 
 export const getAllAdmissionsService = async (filter: {

@@ -17,7 +17,7 @@ const admissionEmiSchema = new Schema<IAdmissionEmi>(
     semester: { type: Number, min: 1 },
     paymentMethod: {
       type: String,
-      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD"],
+      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD", "DD"],
     },
     transactionId: { type: String, trim: true },
     receiptNumber: { type: String, trim: true },

@@ -1,14 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Table, Button, Modal, Form, Row, Col, Badge, Card, Alert, Spinner } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
-const STATUS_COLOR = { PAID: 'success', PENDING: 'warning', OVERDUE: 'danger', WAIVED: 'secondary' };
-const METHOD_ICON = { CASH: 'bi-cash-coin', UPI: 'bi-qr-code-scan', BANK_TRANSFER: 'bi-bank', CHEQUE: 'bi-file-earmark-check', DD: 'bi-card-heading' };
+const STATUS_COLOR = { PAID: 'success', PENDING: 'warning', OVERDUE: 'danger', WAIVED: 'secondary', PARTIAL: 'info' };
+const METHOD_ICON = { CASH: 'bi-cash-coin', UPI: 'bi-qr-code-scan', BANK_TRANSFER: 'bi-bank', CHEQUE: 'bi-file-earmark-check', CARD: 'bi-credit-card', DD: 'bi-card-heading' };
+
+const toDateInput = (date) => new Date(date).toISOString().split('T')[0];
+
+const addMonths = (date, months) => {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+};
+
+const buildLocalSchedule = (admission) => {
+  const numberOfEmis = Number(admission?.numberOfEmis || 0);
+  const balanceDue = Math.max(Number(admission?.balanceDue || 0), 0);
+  if (numberOfEmis < 1 || balanceDue <= 0) return [];
+
+  const baseAmount = Math.floor((balanceDue / numberOfEmis) * 100) / 100;
+  const admissionDate = admission?.admissionDate || new Date();
+
+  return Array.from({ length: numberOfEmis }, (_, index) => {
+    const emiNumber = index + 1;
+    const isLast = emiNumber === numberOfEmis;
+    const emiAmount = isLast
+      ? Math.round((balanceDue - baseAmount * (numberOfEmis - 1)) * 100) / 100
+      : baseAmount;
+
+    return {
+      admission: admission.id,
+      emiNumber,
+      emiAmount,
+      dueDate: toDateInput(addMonths(admissionDate, emiNumber)),
+      status: 'PENDING',
+    };
+  });
+};
 
 const AdmissionEmiSchedule = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const generatingScheduleRef = useRef(false);
   const [admission, setAdmission] = useState(null);
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,17 +56,64 @@ const AdmissionEmiSchedule = () => {
     transactionId: '', remarks: ''
   });
 
-  useEffect(() => { loadAll(); }, [id]);
+  const fetchEmis = async () => {
+    const emiRes = await api.get(`/admissions/emi/admission/${id}`);
+    return Array.isArray(emiRes.data) ? emiRes.data : [];
+  };
+
+  const createScheduleLocally = async (admissionData) => {
+    const payloads = buildLocalSchedule(admissionData);
+    if (payloads.length === 0) {
+      throw new Error('Number of EMIs and balance due are required to generate installments.');
+    }
+
+    const results = await Promise.allSettled(
+      payloads.map(payload => api.post('/admission-emi', payload))
+    );
+
+    const failed = results.find(result => result.status === 'rejected');
+    const schedule = await fetchEmis();
+    if (schedule.length === 0 && failed) {
+      throw failed.reason;
+    }
+    return schedule;
+  };
+
+  const generateScheduleRecords = async (admissionData = admission) => {
+    if (generatingScheduleRef.current) return [];
+    generatingScheduleRef.current = true;
+
+    try {
+      try {
+        const res = await api.post(`/admissions/emi/admission/${id}/generate`);
+        return Array.isArray(res.data) ? res.data : [];
+      } catch (error) {
+        if (error.response?.status !== 404) throw error;
+        return createScheduleLocally(admissionData);
+      }
+    } finally {
+      generatingScheduleRef.current = false;
+    }
+  };
 
   const loadAll = async () => {
     try {
       setLoading(true);
       const admRes = await api.get(`/admissions/${id}`);
-      setAdmission(admRes.data);
+      const admissionData = admRes.data;
+      setAdmission(admissionData);
 
       try {
-        const emiRes = await api.get(`/admissions/emi/admission/${id}`);
-        setEmis(Array.isArray(emiRes.data) ? emiRes.data : []);
+        let schedule = await fetchEmis();
+
+        if (admissionData?.paymentPlan === 'EMI' && schedule.length === 0) {
+          schedule = await generateScheduleRecords(admissionData);
+          if (schedule.length > 0) {
+            setAlert({ type: 'success', msg: 'Installment schedule generated for this admission.' });
+          }
+        }
+
+        setEmis(schedule);
       } catch {
         setEmis([]);
         setAlert({ type: 'warning', msg: 'Admission loaded, but EMI schedule records were not found.' });
@@ -41,13 +122,35 @@ const AdmissionEmiSchedule = () => {
     finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  useEffect(() => { loadAll(); }, [id]);
+
   const openPayModal = (emi) => {
     setSelectedEmi(emi);
+    const dueAmount = emi.emiAmount + (emi.fineAmount || 0) + (emi.carryOverAmount || 0);
     setPayForm({
-      paidAmount: emi.emiAmount, paidDate: new Date().toISOString().split('T')[0],
-      fineAmount: '0', paymentMethod: 'CASH', transactionId: '', remarks: ''
+      paidAmount: dueAmount, paidDate: new Date().toISOString().split('T')[0],
+      fineAmount: emi.fineAmount || '0', paymentMethod: 'CASH', transactionId: '', remarks: ''
     });
     setShowPayModal(true);
+  };
+
+  const generateSchedule = async () => {
+    try {
+      setSubmitting(true);
+      const schedule = await generateScheduleRecords(admission);
+      setEmis(schedule);
+      setAlert({
+        type: schedule.length > 0 ? 'success' : 'warning',
+        msg: schedule.length > 0
+          ? 'Installment schedule generated successfully.'
+          : 'No installments were generated. Please check number of EMIs and balance due.',
+      });
+    } catch (error) {
+      setAlert({ type: 'danger', msg: error.response?.data?.message || error.message || 'Failed to generate EMI schedule.' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handlePaySubmit = async (e) => {
@@ -66,7 +169,7 @@ const AdmissionEmiSchedule = () => {
       setAlert({ type: 'success', msg: `EMI #${selectedEmi.emiNumber} marked as PAID!` });
       setShowPayModal(false);
       loadAll();
-    } catch { setAlert({ type: 'danger', msg: 'Failed to record EMI payment.' }); }
+    } catch (error) { setAlert({ type: 'danger', msg: error.response?.data?.message || 'Failed to record EMI payment.' }); }
     finally { setSubmitting(false); }
   };
 
@@ -115,7 +218,7 @@ const AdmissionEmiSchedule = () => {
   if (loading) return <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>;
 
   const paid = emis.filter(e => e.status === 'PAID').length;
-  const pending = emis.filter(e => e.status === 'PENDING').length;
+  const pending = emis.filter(e => ['PENDING', 'PARTIAL'].includes(e.status)).length;
   const overdue = emis.filter(e => e.status === 'OVERDUE').length;
 
   return (
@@ -186,7 +289,15 @@ const AdmissionEmiSchedule = () => {
       {admission?.paymentPlan === 'EMI' ? (
         <Card className="border-0 shadow-sm rounded-4">
           <Card.Header className="bg-transparent border-0 pt-4 px-4 pb-0">
-            <h5 className="fw-bold text-dark mb-0">EMI Installment Schedule</h5>
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <h5 className="fw-bold text-dark mb-0">EMI Installment Schedule</h5>
+              {emis.length === 0 && (
+                <Button size="sm" variant="primary" className="rounded-pill" onClick={generateSchedule} disabled={submitting}>
+                  <i className="bi bi-calendar-plus me-1"></i>
+                  {submitting ? 'Generating...' : 'Generate Schedule'}
+                </Button>
+              )}
+            </div>
           </Card.Header>
           <Card.Body className="p-0">
             <Table responsive hover className="mb-0 align-middle">
@@ -243,6 +354,13 @@ const AdmissionEmiSchedule = () => {
                     </td>
                   </tr>
                 ))}
+                {emis.length === 0 && (
+                  <tr>
+                    <td colSpan="10" className="text-center py-5 text-muted">
+                      No installment rows found. Use Generate Schedule to create them.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </Table>
           </Card.Body>
