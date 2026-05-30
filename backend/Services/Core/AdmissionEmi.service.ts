@@ -1,7 +1,12 @@
 import AdmissionEmi from "../../Models/Core/AdmissionEmi.ts";
 import Admission from "../../Models/Core/Admission.ts";
-import { createFeeRecordService } from "./Fee.service.ts";
-import type { EmiStatus, PaymentMethod, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
+import { upsertFeeRecordService } from "./Fee.service.ts";
+import type {
+  EmiStatus,
+  PaymentMethod,
+  ChequeDetails,
+  BankTransferDetails,
+} from "../../Interfaces/Core/index.ts";
 
 export interface ICreateAdmissionEmiInput {
   admission: string;
@@ -219,13 +224,12 @@ export const updateEmiPaymentService = async (
   }
 
   const updatedEmi = await AdmissionEmi.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).populate("admission", "admissionNumber student");
 
   if (!updatedEmi) throw new Error("EMI record not found");
 
-  // Sync amountPaid / balanceDue on the parent Admission
   const nextPaidAmount = Number(updatedEmi.paidAmount || 0);
   const paidDelta = nextPaidAmount - previousPaidAmount;
   if (paidDelta !== 0) {
@@ -240,31 +244,35 @@ export const updateEmiPaymentService = async (
     }
   }
 
-  // Auto-create a Finance Fee record so it appears in the Finance portal
-  if (data.status === "PAID" && paidDelta > 0) {
+  if (nextPaidAmount > 0) {
     try {
-      // Resolve student from the Admission
       const admissionDoc = await Admission.findById(emi.admission).select("student");
       if (admissionDoc?.student) {
         const chequeRef = data.chequeDetails?.chequeNumber
           ? `CHQ-${data.chequeDetails.chequeNumber}`
-          : data.transactionId || undefined;
+          : data.transactionId || updatedEmi.transactionId || undefined;
 
-        await createFeeRecordService({
-          student: admissionDoc.student.toString(),
-          feeType: `EMI #${emi.emiNumber} Payment`,
-          amount: paidDelta,
-          discountAmount: 0,
-          fineAmount: Number(data.fineAmount || 0),
-          paymentDate: data.paidDate ? new Date(data.paidDate as unknown as string) : new Date(),
-          paymentMethod: data.paymentMethod as string,
-          transactionId: chequeRef,
-          status: "PAID",
-          remarks: `[EMI] Admission EMI #${emi.emiNumber}${data.remarks ? ` — ${data.remarks}` : ""}`,
-        });
+        await upsertFeeRecordService(
+          { source: "EMI", emiId: updatedEmi._id },
+          {
+            student: admissionDoc.student.toString(),
+            feeType: `EMI #${emi.emiNumber} Payment`,
+            amount: nextPaidAmount,
+            discountAmount: 0,
+            fineAmount: Number(updatedEmi.fineAmount || 0),
+            paymentDate: updatedEmi.paidDate || data.paidDate || new Date(),
+            dueDate: updatedEmi.dueDate,
+            paymentMethod: (updatedEmi.paymentMethod || data.paymentMethod || "CASH") as string,
+            transactionId: chequeRef,
+            status: updatedEmi.status === "PAID" ? "PAID" : "PARTIAL",
+            remarks: `[EMI] Admission EMI #${emi.emiNumber}${updatedEmi.remarks ? ` - ${updatedEmi.remarks}` : ""}`,
+            source: "EMI",
+            admissionId: emi.admission.toString(),
+            emiId: updatedEmi._id.toString(),
+          }
+        );
       }
     } catch (feeErr) {
-      // Non-blocking — log but don't fail the EMI update
       console.warn("[AdmissionEmi] Could not mirror payment to Fee ledger:", feeErr);
     }
   }

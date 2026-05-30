@@ -29,6 +29,8 @@ import timetableRoutes from "./routes/Core/timetable.route.ts";
 import subjectAssignmentRoutes from "./routes/Core/subjectAssignment.route.ts";
 import counselingRoutes from "./routes/Core/counseling.route.ts";
 import feeRoutes from "./routes/Core/fee.route.ts";
+import invoiceRoutes from "./routes/Finance/invoice.route.ts";
+import scholarshipRoutes from "./routes/Finance/scholarship.route.ts";
 
 import libraryRoutes from "./routes/facilities/library.route.ts";
 import hostelRoutes from "./routes/facilities/hostel.route.ts";
@@ -42,7 +44,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5174",
     credentials: true,
   })
 );
@@ -94,6 +96,10 @@ app.use("/api/v1/counseling", counselingRoutes);
 app.use("/api/v1/core/counseling", counselingRoutes);
 app.use("/api/v1/fees", feeRoutes);
 app.use("/api/v1/finance/fees", feeRoutes);
+app.use("/api/v1/finance/invoices", invoiceRoutes);
+app.use("/api/v1/fee-invoices", invoiceRoutes);
+app.use("/api/v1/scholarships", scholarshipRoutes);
+app.use("/api/v1/finance/scholarships", scholarshipRoutes);
 
 // HR module
 app.use("/api/v1/hr/employees", employeeRoutes);

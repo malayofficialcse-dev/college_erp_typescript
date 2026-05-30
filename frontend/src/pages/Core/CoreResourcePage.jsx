@@ -20,6 +20,11 @@ const getLabel = (item, paths = ['name', 'code']) => {
   return values.length ? values.join(' - ') : getId(item);
 };
 
+const getDerivedValue = (item, field) => {
+  if (field.deriveValue) return field.deriveValue(item);
+  return getValue(item, field.name);
+};
+
 const emptyForm = (fields) =>
   fields.reduce((form, field) => {
     form[field.name] = field.defaultValue ?? (field.type === 'checkbox' ? false : '');
@@ -80,12 +85,13 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     const form = emptyForm(fields);
     fields.forEach((field) => {
       if (field.type === 'select') {
-        form[field.name] = getId(getValue(item, field.name)) || getValue(item, field.name) || '';
+        const value = getDerivedValue(item, field);
+        form[field.name] = getId(value) || value || '';
       } else if (field.type === 'date') {
-        const value = getValue(item, field.name);
+        const value = getDerivedValue(item, field);
         form[field.name] = value ? String(value).slice(0, 10) : '';
       } else {
-        form[field.name] = getValue(item, field.name) ?? form[field.name];
+        form[field.name] = getDerivedValue(item, field) ?? form[field.name];
       }
     });
     form.id = getId(item);
@@ -103,8 +109,10 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     return fields.reduce((payload, field) => {
       const value = current[field.name];
       if (field.optional && (value === '' || value === null || value === undefined)) return payload;
-      if (field.type === 'number') payload[field.name] = Number(value);
-      else payload[field.name] = value;
+      const key = field.payloadKey ?? field.name;
+      if (field.type === 'number') payload[key] = Number(value);
+      else if (field.type === 'date') payload[key] = value ? new Date(value) : value;
+      else payload[key] = value;
       return payload;
     }, {});
   };

@@ -1,6 +1,7 @@
 import Admission from "../../Models/Core/Admission.ts";
 import type { AdmissionStatus, PaymentPlan, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
 import { generateEmiScheduleForAdmissionService } from "./AdmissionEmi.service.ts";
+import { upsertFeeRecordService } from "./Fee.service.ts";
 
 export interface ICreateAdmissionInput {
   admissionNumber: string;
@@ -27,6 +28,39 @@ export interface ICreateAdmissionInput {
   remarks?: string;
 }
 
+const syncAdmissionPaymentToLedger = async (admission: any) => {
+  const amountPaid = Number(admission.amountPaid || admission.advanceAmount || 0);
+  if (amountPaid <= 0 || !admission.student) return;
+
+  const netPayableAmount = Number(admission.netPayableAmount || 0);
+  const status = netPayableAmount > 0 && amountPaid < netPayableAmount ? "PARTIAL" : "PAID";
+  const reference =
+    admission.advanceTransactionId ||
+    admission.advanceChequeDetails?.chequeNumber ||
+    admission.advanceBankTransferDetails?.accountNumber ||
+    admission.billNumber ||
+    admission.admissionNumber;
+
+  await upsertFeeRecordService(
+    { source: "ADVANCE", admissionId: admission._id },
+    {
+      student: admission.student.toString(),
+      feeType: "Admission Payment",
+      amount: amountPaid,
+      discountAmount: Number(admission.discountAmount || 0),
+      fineAmount: 0,
+      paymentDate: admission.advancePaymentDate || admission.admissionDate || new Date(),
+      dueDate: admission.admissionDate || new Date(),
+      paymentMethod: admission.advancePaymentMethod || "CASH",
+      transactionId: reference,
+      status,
+      remarks: `[ADVANCE] Admission ${admission.admissionNumber}${admission.remarks ? ` - ${admission.remarks}` : ""}`,
+      source: "ADVANCE",
+      admissionId: admission._id.toString(),
+    }
+  );
+};
+
 export const createAdmissionService = async (data: ICreateAdmissionInput) => {
   const existing = await Admission.findOne({
     $or: [
@@ -38,6 +72,7 @@ export const createAdmissionService = async (data: ICreateAdmissionInput) => {
     throw new Error("Admission already exists for this student in the given course/academic year");
   }
   const admission = await Admission.create(data);
+  await syncAdmissionPaymentToLedger(admission);
 
   if (admission.paymentPlan === "EMI") {
     await generateEmiScheduleForAdmissionService(admission._id.toString());
@@ -80,12 +115,13 @@ export const updateAdmissionService = async (
   data: Partial<ICreateAdmissionInput>
 ) => {
   const admission = await Admission.findByIdAndUpdate(id, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   })
     .populate("student", "firstName lastName enrollmentNumber")
     .populate("course", "name code");
   if (!admission) throw new Error("Admission not found");
+  await syncAdmissionPaymentToLedger(admission);
   return admission;
 };
 

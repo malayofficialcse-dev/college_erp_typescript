@@ -19,7 +19,7 @@ const feeSchema = new Schema<IFee>(
     dueDate: { type: Date },
     paymentMethod: {
       type: String,
-      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "DD"],
+      enum: ["CASH", "UPI", "BANK_TRANSFER", "CHEQUE", "CARD", "DD"],
     },
     transactionId: { type: String, trim: true },
     receiptNumber: { type: String, trim: true, unique: true, sparse: true },
@@ -38,12 +38,13 @@ const feeSchema = new Schema<IFee>(
 );
 
 // Auto-compute netAmount before save
-feeSchema.pre("save", function (next) {
+feeSchema.pre("save", function () {
   this.netAmount = Math.max((this.amount || 0) - (this.discountAmount || 0) + (this.fineAmount || 0), 0);
-  next();
 });
 
 feeSchema.index({ student: 1, status: 1 });
 feeSchema.index({ paymentDate: -1 });
+feeSchema.index({ source: 1, admissionId: 1 });
+feeSchema.index({ source: 1, emiId: 1 });
 
 export default mongoose.model<IFee>("Fee", feeSchema);

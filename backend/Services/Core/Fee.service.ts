@@ -21,13 +21,39 @@ export interface ICreateFeeInput {
   emiId?: string;
 }
 
-export const createFeeRecordService = async (data: ICreateFeeInput) => {
-  const receiptNumber = data.receiptNumber || `REC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  const netAmount = data.netAmount ?? Math.max(
+const computeNetAmount = (data: Pick<ICreateFeeInput, "amount" | "discountAmount" | "fineAmount" | "netAmount">) =>
+  data.netAmount ?? Math.max(
     (data.amount || 0) - (data.discountAmount || 0) + (data.fineAmount || 0),
     0
   );
-  return Fee.create({ ...data, receiptNumber, netAmount });
+
+const buildReceiptNumber = (prefix = "REC") =>
+  `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+export const createFeeRecordService = async (data: ICreateFeeInput) => {
+  const receiptNumber = data.receiptNumber || buildReceiptNumber();
+  const netAmount = computeNetAmount(data);
+  return Fee.create({ ...(data as any), receiptNumber, netAmount });
+};
+
+export const upsertFeeRecordService = async (
+  filter: Record<string, unknown>,
+  data: ICreateFeeInput
+) => {
+  const existing = await Fee.findOne(filter).select("receiptNumber");
+  const receiptNumber = data.receiptNumber || existing?.receiptNumber || buildReceiptNumber(data.source || "REC");
+  const netAmount = computeNetAmount(data);
+
+  return Fee.findOneAndUpdate(
+    filter,
+    { ...(data as any), receiptNumber, netAmount },
+    {
+      returnDocument: "after",
+      runValidators: true,
+      setDefaultsOnInsert: true,
+      upsert: true,
+    }
+  );
 };
 
 export const searchFeesService = async (filter: {
@@ -38,6 +64,8 @@ export const searchFeesService = async (filter: {
   dateTo?: string;
   keyword?: string;
   feeType?: string;
+  paymentMethod?: string;
+  source?: string;
   size?: number;
   page?: number;
 }) => {
@@ -47,6 +75,8 @@ export const searchFeesService = async (filter: {
   if (filter.status) query.status = filter.status;
   if (filter.semester) query.semester = parseInt(filter.semester);
   if (filter.feeType) query.feeType = filter.feeType;
+  if (filter.paymentMethod) query.paymentMethod = filter.paymentMethod;
+  if (filter.source) query.source = filter.source;
 
   if (filter.dateFrom || filter.dateTo) {
     const dateFilter: Record<string, Date> = {};
@@ -72,9 +102,16 @@ export const searchFeesService = async (filter: {
     Fee.find(query)
       .populate({
         path: "student",
-        select: "firstName lastName enrollmentNumber email",
-        populate: { path: "department", select: "name" },
+        select: "firstName lastName enrollmentNumber email phone",
+        populate: [
+          { path: "department", select: "name code" },
+          { path: "course", select: "name code" },
+          { path: "section", select: "name code" },
+          { path: "academicYear", select: "name code" },
+        ],
       })
+      .populate("admissionId", "admissionNumber billNumber paymentPlan totalFeeAmount discountAmount netPayableAmount amountPaid balanceDue")
+      .populate("emiId", "emiNumber emiAmount dueDate paidAmount fineAmount carryOverAmount status")
       .sort({ paymentDate: -1, createdAt: -1 })
       .skip(skip)
       .limit(size),
@@ -87,18 +124,25 @@ export const searchFeesService = async (filter: {
 export const getFeeByIdService = async (id: string) => {
   return Fee.findById(id).populate({
     path: "student",
-    select: "firstName lastName enrollmentNumber email",
-    populate: { path: "department", select: "name" },
-  });
+    select: "firstName lastName enrollmentNumber email phone",
+    populate: [
+      { path: "department", select: "name code" },
+      { path: "course", select: "name code" },
+      { path: "section", select: "name code" },
+      { path: "academicYear", select: "name code" },
+    ],
+  })
+    .populate("admissionId", "admissionNumber billNumber paymentPlan totalFeeAmount discountAmount netPayableAmount amountPaid balanceDue")
+    .populate("emiId", "emiNumber emiAmount dueDate paidAmount fineAmount carryOverAmount status");
 };
 
 export const getTotalCollectedService = async () => {
   const result = await Fee.aggregate([
-    { $match: { status: "PAID" } },
+    { $match: { status: { $in: ["PAID", "PARTIAL"] } } },
     {
       $group: {
         _id: null,
-        totalCollected: { $sum: "$amount" },
+        totalCollected: { $sum: "$netAmount" },
         totalDiscount: { $sum: "$discountAmount" },
         totalFines: { $sum: "$fineAmount" },
       },

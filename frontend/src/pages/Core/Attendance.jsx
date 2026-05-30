@@ -13,14 +13,23 @@ const Attendance = () => (
     fields={[
       { name: 'student', label: 'Student', type: 'select', options: 'students' },
       { name: 'subject', label: 'Subject', type: 'select', options: 'subjects', optional: true },
-      { name: 'attendanceDate', label: 'Date', type: 'date' },
+      {
+        name: 'attendanceDate',
+        label: 'Date',
+        type: 'date',
+        payloadKey: 'date',
+        deriveValue: (item) => {
+          const value = item.attendanceDate || item.date;
+          return value ? String(value).slice(0, 10) : '';
+        },
+      },
       { name: 'status', label: 'Status', type: 'select', optionsList: [{ value: 'PRESENT', label: 'Present' }, { value: 'ABSENT', label: 'Absent' }, { value: 'LATE', label: 'Late' }, { value: 'EXCUSED', label: 'Excused' }], defaultValue: 'PRESENT' },
       { name: 'remarks', label: 'Remarks', type: 'textarea', optional: true },
     ]}
     columns={[
       { key: 'student', label: 'Student', className: 'px-4 fw-bold text-primary', render: (item) => item.student ? `${item.student.firstName} ${item.student.lastName}` : 'N/A' },
       { key: 'subject.subjectName', label: 'Subject' },
-      { key: 'attendanceDate', label: 'Date', render: (item) => String(item.attendanceDate || '').slice(0, 10) || 'N/A' },
+      { key: 'attendanceDate', label: 'Date', render: (item) => String(item.attendanceDate || item.date || '').slice(0, 10) || 'N/A' },
       { key: 'status', label: 'Status' },
     ]}
   />

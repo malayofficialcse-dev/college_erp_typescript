@@ -6,9 +6,10 @@ export type FeePaymentMethod =
   | "UPI"
   | "BANK_TRANSFER"
   | "CHEQUE"
+  | "CARD"
   | "DD";
 
-export type FeeSource = "DIRECT" | "EMI" | "ADVANCE";
+export type FeeSource = "DIRECT" | "EMI" | "ADVANCE" | "INVOICE";
 
 export interface IFee extends Document {
   student: Types.ObjectId;

@@ -1,6 +1,12 @@
 import React from 'react';
 import CoreResourcePage from './CoreResourcePage';
 
+const getYear = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.getFullYear();
+};
+
 const AcademicYears = () => (
   <CoreResourcePage
     title="Academic Years"
@@ -8,16 +14,16 @@ const AcademicYears = () => (
     icon="bi-calendar-range"
     fields={[
       { name: 'name', label: 'Name', placeholder: 'e.g. 2024-2025' },
-      { name: 'startYear', label: 'Start Year', type: 'number' },
-      { name: 'endYear', label: 'End Year', type: 'number' },
+      { name: 'startYear', label: 'Start Year', type: 'number', deriveValue: (item) => item.startYear || getYear(item.startDate) },
+      { name: 'endYear', label: 'End Year', type: 'number', deriveValue: (item) => item.endYear || getYear(item.endDate) },
       { name: 'startDate', label: 'Start Date', type: 'date' },
       { name: 'endDate', label: 'End Date', type: 'date' },
       { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, cols: 12 },
     ]}
     columns={[
       { key: 'name', label: 'Name', className: 'px-4 fw-bold text-primary' },
-      { key: 'startYear', label: 'Start Year' },
-      { key: 'endYear', label: 'End Year' },
+      { key: 'startYear', label: 'Start Year', render: (item) => item.startYear || getYear(item.startDate) || 'N/A' },
+      { key: 'endYear', label: 'End Year', render: (item) => item.endYear || getYear(item.endDate) || 'N/A' },
       { key: 'startDate', label: 'Start Date', render: (item) => String(item.startDate || '').slice(0, 10) || 'N/A' },
       { key: 'endDate', label: 'End Date', render: (item) => String(item.endDate || '').slice(0, 10) || 'N/A' },
       { key: 'isActive', label: 'Status' },

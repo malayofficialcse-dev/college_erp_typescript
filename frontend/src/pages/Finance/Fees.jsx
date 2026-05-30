@@ -1,71 +1,197 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Row, Col, Badge, Card, Alert, Spinner } from 'react-bootstrap';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Badge, Button, Card, Col, Dropdown, Form, Modal, Row, Spinner, Table } from 'react-bootstrap';
 import api from '../../services/api';
 
-const paymentMethodIcons = {
-  CASH: 'bi-cash-coin',
-  BANK_TRANSFER: 'bi-bank',
-  UPI: 'bi-qr-code-scan',
-  CHEQUE: 'bi-file-earmark-check',
-  DD: 'bi-card-heading'
+const currency = (value) =>
+  Number(value || 0).toLocaleString(undefined, {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  });
+
+const sourceMeta = {
+  ADVANCE: { label: 'Admission', bg: 'primary' },
+  EMI: { label: 'EMI', bg: 'warning' },
+  INVOICE: { label: 'Invoice', bg: 'info' },
+  DIRECT: { label: 'Manual', bg: 'secondary' },
 };
 
-const methodBadgeBg = {
-  CASH: 'success',
-  BANK_TRANSFER: 'primary',
-  UPI: 'info',
-  CHEQUE: 'warning',
-  DD: 'secondary'
+const methodIcons = {
+  CASH: 'bi-cash-coin',
+  UPI: 'bi-qr-code-scan',
+  BANK_TRANSFER: 'bi-bank',
+  CARD: 'bi-credit-card',
+  CHEQUE: 'bi-file-earmark-check',
+  DD: 'bi-card-heading',
+};
+
+const defaultFilters = {
+  keyword: '',
+  statuses: [],
+  semesters: [],
+  sources: [],
+  paymentMethods: [],
+  dateFrom: '',
+  dateTo: '',
+};
+
+const defaultForm = {
+  student: '',
+  amount: '',
+  discountAmount: '0',
+  fineAmount: '0',
+  semester: '',
+  paymentMethod: 'CASH',
+  transactionId: '',
+  feeType: 'Manual Fee Payment',
+  remarks: '',
+};
+
+const sourceOptions = [
+  { value: 'ADVANCE', label: 'Admission' },
+  { value: 'EMI', label: 'EMI' },
+  { value: 'INVOICE', label: 'Invoice' },
+  { value: 'DIRECT', label: 'Manual' },
+];
+
+const statusOptions = [
+  { value: 'PAID', label: 'PAID' },
+  { value: 'PARTIAL', label: 'PARTIAL' },
+  { value: 'UNPAID', label: 'UNPAID' },
+  { value: 'CANCELLED', label: 'CANCELLED' },
+];
+
+const methodOptions = [
+  { value: 'CASH', label: 'Cash' },
+  { value: 'UPI', label: 'UPI' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CARD', label: 'Card' },
+  { value: 'CHEQUE', label: 'Cheque' },
+  { value: 'DD', label: 'DD' },
+];
+
+const getStudentName = (payment) =>
+  `${payment.student?.firstName || ''} ${payment.student?.lastName || ''}`.trim();
+
+const getSourceLabel = (source) => sourceMeta[source]?.label || source || 'Manual';
+
+const getPaymentDate = (payment) =>
+  payment.paymentDate ? String(payment.paymentDate).slice(0, 10) : '';
+
+const getSearchText = (payment) =>
+  [
+    payment.receiptNumber,
+    payment.transactionId,
+    payment.feeType,
+    payment.status,
+    payment.source,
+    getSourceLabel(payment.source),
+    payment.paymentMethod,
+    payment.remarks,
+    payment.semester,
+    getPaymentDate(payment),
+    getStudentName(payment),
+    payment.student?.enrollmentNumber,
+    payment.student?.email,
+    payment.student?.phone,
+    payment.student?.department?.name,
+    payment.student?.department?.code,
+    payment.student?.course?.name,
+    payment.student?.section?.name,
+    payment.admissionId?.admissionNumber,
+    payment.admissionId?.billNumber,
+    payment.admissionId?.paymentPlan,
+    payment.emiId?.emiNumber ? `EMI ${payment.emiId.emiNumber}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
+const SearchableMultiSelect = ({ label, options, selected, onChange, placeholder = 'All' }) => {
+  const [search, setSearch] = useState('');
+
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedLabels = options
+    .filter((option) => selected.includes(option.value))
+    .map((option) => option.label);
+
+  const toggleOption = (value) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((item) => item !== value)
+        : [...selected, value]
+    );
+  };
+
+  return (
+    <div>
+      <Form.Label className="text-muted small fw-bold">{label}</Form.Label>
+      <Dropdown autoClose="outside" className="w-100">
+        <Dropdown.Toggle variant="light" className="w-100 border text-start d-flex justify-content-between align-items-center">
+          <span className="text-truncate">
+            {selectedLabels.length ? selectedLabels.join(', ') : placeholder}
+          </span>
+          {selectedLabels.length > 0 && <Badge bg="primary" className="ms-2">{selectedLabels.length}</Badge>}
+        </Dropdown.Toggle>
+        <Dropdown.Menu className="w-100 p-2 shadow border-0" style={{ maxHeight: 320, overflowY: 'auto' }}>
+          <Form.Control
+            size="sm"
+            className="mb-2"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={`Search ${label.toLowerCase()}...`}
+          />
+          {selected.length > 0 && (
+            <Button variant="link" size="sm" className="px-0 text-danger text-decoration-none" onClick={() => onChange([])}>
+              Clear selected
+            </Button>
+          )}
+          {filteredOptions.length ? filteredOptions.map((option) => (
+            <Form.Check
+              key={option.value}
+              type="checkbox"
+              id={`${label}-${option.value}`}
+              label={option.label}
+              checked={selected.includes(option.value)}
+              onChange={() => toggleOption(option.value)}
+              className="my-1"
+            />
+          )) : (
+            <div className="text-muted small px-2 py-3 text-center">No options found.</div>
+          )}
+        </Dropdown.Menu>
+      </Dropdown>
+    </div>
+  );
 };
 
 const Fees = () => {
   const [payments, setPayments] = useState([]);
   const [students, setStudents] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [filters, setFilters] = useState(defaultFilters);
+  const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [totalCollected, setTotalCollected] = useState(0);
-
-  const [showPayModal, setShowPayModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Search & Filter state
-  const [filters, setFilters] = useState({
-    studentId: '',
-    status: '',
-    semester: '',
-    dateFrom: '',
-    dateTo: '',
-    keyword: ''
-  });
-
-  const [form, setForm] = useState({
-    studentId: '',
-    amount: '',
-    discountAmount: '0',
-    fineAmount: '0',
-    semester: '',
-    paymentMethod: 'CASH',
-    transactionId: '',
-    paymentType: 'INITIAL', // INITIAL or EMI
-    remarks: ''
-  });
-
-  useEffect(() => {
-    fetchPayments();
-    fetchStudents();
-    fetchDepartments();
-    fetchTotalCollected();
-  }, [filters]);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [alert, setAlert] = useState(null);
 
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/fees/search', { params: { ...filters, size: 50 } });
-      setPayments(res.data.content || res.data || []);
-    } catch {
-      setError('Failed to fetch transactions.');
+      const response = await api.get('/fees/search', { params: { size: 5000 } });
+      setPayments(response.data.content || response.data || []);
+    } catch (error) {
+      setAlert({ type: 'danger', message: error.response?.data?.message || 'Failed to fetch transactions.' });
     } finally {
       setLoading(false);
     }
@@ -73,151 +199,214 @@ const Fees = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await api.get('/students/search', { params: { size: 200 } });
-      setStudents(res.data.content || []);
-    } catch (e) {
-      console.error(e);
+      const response = await api.get('/students/search', { params: { size: 500 } });
+      setStudents(response.data.content || response.data || []);
+    } catch {
+      setStudents([]);
     }
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const res = await api.get('/departments');
-      setDepartments(res.data.content || res.data || []);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  useEffect(() => {
+    fetchPayments();
+    fetchStudents();
+  }, []);
 
-  const fetchTotalCollected = async () => {
-    try {
-      const res = await api.get('/fees/total-collected');
-      setTotalCollected(res.data.totalCollected || 0);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const semesterOptions = useMemo(() => {
+    const semesters = [...new Set(payments.map((payment) => payment.semester).filter(Boolean))];
+    return semesters
+      .sort((first, second) => Number(first) - Number(second))
+      .map((semester) => ({ value: String(semester), label: `Semester ${semester}` }));
+  }, [payments]);
 
-  const handlePay = async (e) => {
-    e.preventDefault();
+  const filteredPayments = useMemo(() => {
+    const keyword = filters.keyword.trim().toLowerCase();
+    return payments.filter((payment) => {
+      const paymentDate = getPaymentDate(payment);
+      if (keyword && !getSearchText(payment).includes(keyword)) return false;
+      if (filters.statuses.length && !filters.statuses.includes(payment.status)) return false;
+      if (filters.sources.length && !filters.sources.includes(payment.source || 'DIRECT')) return false;
+      if (filters.paymentMethods.length && !filters.paymentMethods.includes(payment.paymentMethod)) return false;
+      if (filters.semesters.length && !filters.semesters.includes(String(payment.semester || ''))) return false;
+      if (filters.dateFrom && paymentDate < filters.dateFrom) return false;
+      if (filters.dateTo && paymentDate > filters.dateTo) return false;
+      return true;
+    });
+  }, [payments, filters]);
+
+  const summary = useMemo(() => {
+    return filteredPayments.reduce(
+      (acc, payment) => {
+        acc.totalCollected += Number(payment.netAmount || 0);
+        acc.totalDiscount += Number(payment.discountAmount || 0);
+        acc.totalFines += Number(payment.fineAmount || 0);
+        acc.baseAmount += Number(payment.amount || 0);
+        return acc;
+      },
+      { totalCollected: 0, totalDiscount: 0, totalFines: 0, baseAmount: 0 }
+    );
+  }, [filteredPayments]);
+
+  const updateFilter = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
+  const updateForm = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const clearFilters = () => setFilters(defaultFilters);
+
+  const recordManualPayment = async (event) => {
+    event.preventDefault();
     try {
       setSubmitting(true);
-      // Inject payment type into remarks
-      const formattedRemarks = `[Type: ${form.paymentType}] ${form.remarks}`;
-      const payload = {
-        student: { id: parseInt(form.studentId) },
-        amount: parseFloat(form.amount),
-        discountAmount: parseFloat(form.discountAmount || 0),
-        fineAmount: parseFloat(form.fineAmount || 0),
-        semester: form.semester,
-        paymentDate: new Date().toISOString().split('T')[0],
+      await api.post('/fees', {
+        student: form.student,
+        feeType: form.feeType,
+        amount: Number(form.amount),
+        discountAmount: Number(form.discountAmount || 0),
+        fineAmount: Number(form.fineAmount || 0),
+        semester: form.semester ? Number(form.semester) : undefined,
+        paymentDate: new Date().toISOString(),
         paymentMethod: form.paymentMethod,
         transactionId: form.transactionId,
-        remarks: formattedRemarks,
-        status: 'PAID'
-      };
-
-      await api.post('/fees', payload);
-      setSuccess('Transaction recorded successfully!');
-      setShowPayModal(false);
-      // Reset form
-      setForm({
-        studentId: '', amount: '', discountAmount: '0', fineAmount: '0',
-        semester: '', paymentMethod: 'CASH', transactionId: '', paymentType: 'INITIAL', remarks: ''
+        status: 'PAID',
+        source: 'DIRECT',
+        remarks: form.remarks,
       });
+      setAlert({ type: 'success', message: 'Transaction recorded successfully.' });
+      setShowPayModal(false);
+      setForm(defaultForm);
       fetchPayments();
-      fetchTotalCollected();
-    } catch {
-      setError('Failed to save transaction.');
+    } catch (error) {
+      setAlert({ type: 'danger', message: error.response?.data?.message || 'Failed to record transaction.' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const parsePaymentType = (remarksStr) => {
-    if (!remarksStr) return 'INITIAL';
-    if (remarksStr.includes('[Type: EMI]')) return 'EMI';
-    if (remarksStr.includes('[Type: INITIAL]')) return 'INITIAL';
-    return 'INITIAL';
+  const exportToExcel = () => {
+    const rows = filteredPayments.map((payment) => ({
+      Receipt: payment.receiptNumber || '',
+      Date: getPaymentDate(payment),
+      Student: getStudentName(payment),
+      Enrollment: payment.student?.enrollmentNumber || '',
+      Email: payment.student?.email || '',
+      Phone: payment.student?.phone || '',
+      Department: payment.student?.department?.name || '',
+      Course: payment.student?.course?.name || '',
+      Section: payment.student?.section?.name || '',
+      Source: getSourceLabel(payment.source),
+      FeeType: payment.feeType || '',
+      AdmissionNumber: payment.admissionId?.admissionNumber || '',
+      BillNumber: payment.admissionId?.billNumber || '',
+      PaymentPlan: payment.admissionId?.paymentPlan || '',
+      EmiNumber: payment.emiId?.emiNumber || '',
+      Semester: payment.semester || '',
+      BaseAmount: payment.amount || 0,
+      Discount: payment.discountAmount || 0,
+      Fine: payment.fineAmount || 0,
+      NetAmount: payment.netAmount || 0,
+      Method: payment.paymentMethod || '',
+      Status: payment.status || '',
+      Reference: payment.transactionId || '',
+      DueDate: payment.dueDate ? String(payment.dueDate).slice(0, 10) : '',
+      Remarks: payment.remarks || '',
+    }));
+
+    const headers = Object.keys(rows[0] || {
+      Receipt: '',
+      Date: '',
+      Student: '',
+      Enrollment: '',
+      Email: '',
+      Phone: '',
+      Department: '',
+      Course: '',
+      Section: '',
+      Source: '',
+      FeeType: '',
+      AdmissionNumber: '',
+      BillNumber: '',
+      PaymentPlan: '',
+      EmiNumber: '',
+      Semester: '',
+      BaseAmount: '',
+      Discount: '',
+      Fine: '',
+      NetAmount: '',
+      Method: '',
+      Status: '',
+      Reference: '',
+      DueDate: '',
+      Remarks: '',
+    });
+
+    const tableRows = [
+      `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>`,
+      ...rows.map((row) =>
+        `<tr>${headers.map((header) => `<td>${escapeHtml(row[header])}</td>`).join('')}</tr>`
+      ),
+    ].join('');
+
+    const workbook = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head><meta charset="UTF-8"></head>
+        <body><table>${tableRows}</table></body>
+      </html>
+    `;
+
+    const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `finance-transactions-${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const parseCleanRemarks = (remarksStr) => {
-    if (!remarksStr) return '';
-    return remarksStr.replace(/\[Type: (EMI|INITIAL)\]\s*/, '');
-  };
-
-  const printReceipt = (p) => {
+  const printReceipt = (payment) => {
+    const source = getSourceLabel(payment.source);
     const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
     printWindow.document.write(`
       <html>
         <head>
-          <title>Fee Receipt - ${p.receiptNumber || ('REC-' + p.id)}</title>
+          <title>Receipt - ${payment.receiptNumber || payment.id}</title>
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-          <style>
-            body { font-family: sans-serif; padding: 40px; background: white; color: black; }
-            .receipt-border { border: 2px solid #333; padding: 25px; border-radius: 8px; }
-          </style>
+          <style>body{padding:40px;color:#111}.receipt{border:2px solid #111;padding:28px;border-radius:8px}</style>
         </head>
         <body>
-          <div class="receipt-border">
+          <div class="receipt">
             <div class="text-center mb-4">
               <h2 class="fw-bold">ERP UNIVERSITY</h2>
-              <p class="text-muted mb-1">Official Fee Receipt</p>
+              <p class="text-muted mb-1">Official Finance Receipt</p>
               <hr>
             </div>
             <div class="row mb-3">
               <div class="col-6">
-                <strong>Receipt Number:</strong> ${p.receiptNumber || ('REC-' + p.id)}<br>
-                <strong>Transaction ID:</strong> ${p.transactionId || 'N/A'}<br>
-                <strong>Date:</strong> ${p.paymentDate}
+                <strong>Receipt:</strong> ${payment.receiptNumber || 'N/A'}<br>
+                <strong>Reference:</strong> ${payment.transactionId || 'N/A'}<br>
+                <strong>Date:</strong> ${getPaymentDate(payment) || 'N/A'}<br>
+                <strong>Source:</strong> ${source}
               </div>
               <div class="col-6 text-end">
-                <strong>Student Name:</strong> ${p.student?.firstName} ${p.student?.lastName}<br>
-                <strong>Student Code:</strong> ${p.student?.enrollmentNumber}<br>
-                <strong>Department:</strong> ${p.student?.department?.name || 'N/A'}
+                <strong>Student:</strong> ${getStudentName(payment)}<br>
+                <strong>Enrollment:</strong> ${payment.student?.enrollmentNumber || 'N/A'}<br>
+                <strong>Department:</strong> ${payment.student?.department?.name || 'N/A'}<br>
+                <strong>Admission:</strong> ${payment.admissionId?.admissionNumber || 'N/A'}
               </div>
             </div>
             <table class="table table-bordered my-4">
-              <thead>
-                <tr class="table-light">
-                  <th>Particulars</th>
-                  <th class="text-end">Amount</th>
-                </tr>
-              </thead>
               <tbody>
-                <tr>
-                  <td>Base Amount (${p.semester})</td>
-                  <td class="text-end">$${p.amount}</td>
-                </tr>
-                <tr>
-                  <td>Discount</td>
-                  <td class="text-end">-$${p.discountAmount || 0}</td>
-                </tr>
-                <tr>
-                  <td>Fines / Late Charges</td>
-                  <td class="text-end">+$${p.fineAmount || 0}</td>
-                </tr>
-                <tr class="table-light fw-bold">
-                  <td>Net Collected</td>
-                  <td class="text-end">$${p.netAmount}</td>
-                </tr>
+                <tr><td>${payment.feeType || 'Fee Payment'}</td><td class="text-end">${currency(payment.amount)}</td></tr>
+                <tr><td>Discount</td><td class="text-end">-${currency(payment.discountAmount)}</td></tr>
+                <tr><td>Fine</td><td class="text-end">+${currency(payment.fineAmount)}</td></tr>
+                <tr class="fw-bold table-light"><td>Net Amount</td><td class="text-end">${currency(payment.netAmount)}</td></tr>
               </tbody>
             </table>
-            <div class="row mt-4">
-              <div class="col-6">
-                <strong>Payment Method:</strong> ${p.paymentMethod}<br>
-                <strong>Installment Type:</strong> ${parsePaymentType(p.remarks)}<br>
-                <strong>Remarks:</strong> ${parseCleanRemarks(p.remarks) || 'None'}
-              </div>
-              <div class="col-6 text-end mt-5">
-                <p class="mb-0">______________________</p>
-                <small>Authorized Collector (${p.createdBy || 'Admin Staff'})</small>
-              </div>
-            </div>
+            <p><strong>Payment Method:</strong> ${payment.paymentMethod || 'N/A'}</p>
+            <p><strong>Remarks:</strong> ${payment.remarks || 'None'}</p>
           </div>
-          <script>
-            window.onload = function() { window.print(); }
-          </script>
+          <script>window.onload = function(){ window.print(); }</script>
         </body>
       </html>
     `);
@@ -229,114 +418,171 @@ const Fees = () => {
       <div className="d-flex justify-content-between align-items-center mb-4 mt-2">
         <div>
           <h2 className="text-dark fw-bold mb-0">Transaction List</h2>
-          <p className="text-muted mb-0 small">Total Cash Collected: <strong className="text-primary">${totalCollected.toLocaleString()}</strong></p>
+          <p className="text-muted mb-0 small">
+            Showing {filteredPayments.length} of {payments.length} finance transactions.
+          </p>
         </div>
-        <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => setShowPayModal(true)}>
-          <i className="bi bi-plus-circle-fill me-2"></i>Record Transaction
-        </Button>
+        <div className="d-flex gap-2">
+          <Button variant="success" className="rounded-pill px-4" onClick={exportToExcel}>
+            <i className="bi bi-file-earmark-excel-fill me-2"></i>Export Excel
+          </Button>
+          <Button variant="primary" className="rounded-pill px-4" onClick={() => setShowPayModal(true)}>
+            <i className="bi bi-plus-circle-fill me-2"></i>Record Transaction
+          </Button>
+        </div>
       </div>
 
-      {success && <Alert variant="success" className="border-0 shadow-sm" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
-      {error && <Alert variant="danger" className="border-0 shadow-sm" onClose={() => setError(null)} dismissible>{error}</Alert>}
+      {alert && (
+        <Alert variant={alert.type} className="border-0 shadow-sm" onClose={() => setAlert(null)} dismissible>
+          {alert.message}
+        </Alert>
+      )}
 
-      {/* Filters Bar */}
+      <Row className="g-3 mb-4">
+        {[
+          ['Net Collected', summary.totalCollected, 'bi-wallet-fill', 'success'],
+          ['Base Amount', summary.baseAmount, 'bi-cash-stack', 'primary'],
+          ['Discounts', summary.totalDiscount, 'bi-tags-fill', 'warning'],
+          ['Fines', summary.totalFines, 'bi-exclamation-circle-fill', 'danger'],
+        ].map(([label, value, icon, variant]) => (
+          <Col md={3} key={label}>
+            <Card className="border-0 shadow-sm rounded-4">
+              <Card.Body className="d-flex align-items-center gap-3">
+                <div className={`rounded-circle bg-${variant}-subtle text-${variant} d-flex align-items-center justify-content-center`} style={{ width: 44, height: 44 }}>
+                  <i className={`bi ${icon}`}></i>
+                </div>
+                <div>
+                  <div className="fw-bold text-dark">{currency(value)}</div>
+                  <small className="text-muted">{label}</small>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
       <Card className="border-0 shadow-sm rounded-4 mb-4">
         <Card.Body className="p-3 bg-light rounded-4">
-          <Row className="g-3">
+          <Row className="g-3 align-items-end">
             <Col md={3}>
-              <Form.Label className="text-muted small fw-bold">Search Keywords</Form.Label>
-              <Form.Control type="text" placeholder="Receipt / Txn ID / Remarks..." value={filters.keyword}
-                onChange={e => setFilters({...filters, keyword: e.target.value})} className="rounded-3" />
+              <Form.Label className="text-muted small fw-bold">Search All Details</Form.Label>
+              <Form.Control
+                value={filters.keyword}
+                onChange={(event) => updateFilter('keyword', event.target.value)}
+                placeholder="Student, receipt, admission, reference..."
+              />
             </Col>
             <Col md={2}>
-              <Form.Label className="text-muted small fw-bold">Semester</Form.Label>
-              <Form.Control type="text" placeholder="e.g. Semester I" value={filters.semester}
-                onChange={e => setFilters({...filters, semester: e.target.value})} className="rounded-3" />
+              <SearchableMultiSelect
+                label="Source"
+                options={sourceOptions}
+                selected={filters.sources}
+                onChange={(value) => updateFilter('sources', value)}
+                placeholder="All Sources"
+              />
             </Col>
             <Col md={2}>
-              <Form.Label className="text-muted small fw-bold">Payment Status</Form.Label>
-              <Form.Select value={filters.status} onChange={e => setFilters({...filters, status: e.target.value})} className="rounded-3">
-                <option value="">All Statuses</option>
-                <option value="PAID">PAID</option>
-                <option value="PENDING">PENDING</option>
-                <option value="CANCELLED">CANCELLED</option>
-              </Form.Select>
+              <SearchableMultiSelect
+                label="Status"
+                options={statusOptions}
+                selected={filters.statuses}
+                onChange={(value) => updateFilter('statuses', value)}
+                placeholder="All Statuses"
+              />
             </Col>
-            <Col md={2.5}>
-              <Form.Label className="text-muted small fw-bold">From Date</Form.Label>
-              <Form.Control type="date" value={filters.dateFrom}
-                onChange={e => setFilters({...filters, dateFrom: e.target.value})} className="rounded-3" />
+            <Col md={2}>
+              <SearchableMultiSelect
+                label="Method"
+                options={methodOptions}
+                selected={filters.paymentMethods}
+                onChange={(value) => updateFilter('paymentMethods', value)}
+                placeholder="All Methods"
+              />
             </Col>
-            <Col md={2.5}>
-              <Form.Label className="text-muted small fw-bold">To Date</Form.Label>
-              <Form.Control type="date" value={filters.dateTo}
-                onChange={e => setFilters({...filters, dateTo: e.target.value})} className="rounded-3" />
+            <Col md={1}>
+              <SearchableMultiSelect
+                label="Sem"
+                options={semesterOptions}
+                selected={filters.semesters}
+                onChange={(value) => updateFilter('semesters', value)}
+                placeholder="All"
+              />
+            </Col>
+            <Col md={1}>
+              <Form.Label className="text-muted small fw-bold">From</Form.Label>
+              <Form.Control type="date" value={filters.dateFrom} onChange={(event) => updateFilter('dateFrom', event.target.value)} />
+            </Col>
+            <Col md={1}>
+              <Form.Label className="text-muted small fw-bold">To</Form.Label>
+              <Form.Control type="date" value={filters.dateTo} onChange={(event) => updateFilter('dateTo', event.target.value)} />
+            </Col>
+            <Col md={12} className="d-flex justify-content-end">
+              <Button variant="link" className="text-danger text-decoration-none px-0" onClick={clearFilters}>
+                Clear all filters
+              </Button>
             </Col>
           </Row>
         </Card.Body>
       </Card>
 
-      {/* Transactions Table */}
-      {loading ? <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div> : (
+      {loading ? (
+        <div className="text-center py-5"><Spinner animation="border" variant="primary" /></div>
+      ) : (
         <Card className="border-0 shadow-sm rounded-4">
           <Card.Body className="p-0">
             <Table responsive hover className="mb-0 align-middle">
               <thead className="bg-light">
                 <tr>
                   <th className="px-4 py-3">Receipt / Date</th>
-                  <th>Student Info</th>
-                  <th>Department</th>
-                  <th>Payment Type</th>
-                  <th>Collected Amount</th>
-                  <th>Payment Method</th>
-                  <th>Reference ID</th>
-                  <th>Who Taken</th>
+                  <th>Student</th>
+                  <th>Source</th>
+                  <th>Admission / EMI</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th>Reference</th>
                   <th className="text-end px-4">Receipt</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.length > 0 ? payments.map(p => (
-                  <tr key={p.id}>
-                    <td className="px-4">
-                      <div className="fw-bold text-dark">{p.receiptNumber || `REC-${p.id}`}</div>
-                      <small className="text-muted">{p.paymentDate}</small>
-                    </td>
-                    <td>
-                      <div className="fw-semibold">{p.student?.firstName} {p.student?.lastName}</div>
-                      <small className="text-muted">{p.student?.enrollmentNumber}</small>
-                    </td>
-                    <td>{p.student?.department?.name || 'N/A'}</td>
-                    <td>
-                      <Badge bg={parsePaymentType(p.remarks) === 'INITIAL' ? 'primary' : 'warning'} className="rounded-pill px-2.5">
-                        {parsePaymentType(p.remarks)}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div className="fw-bold text-dark">${p.netAmount}</div>
-                      <small className="text-muted" style={{ fontSize: '0.72rem' }}>
-                        Base: ${p.amount} · Disc: -${p.discountAmount || 0}
-                      </small>
-                    </td>
-                    <td>
-                      <Badge bg={methodBadgeBg[p.paymentMethod] || 'secondary'} className="rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5">
-                        <i className={`bi ${paymentMethodIcons[p.paymentMethod] || 'bi-credit-card'}`}></i>
-                        {p.paymentMethod}
-                      </Badge>
-                    </td>
-                    <td><code className="text-dark">{p.transactionId || '—'}</code></td>
-                    <td>
-                      <span className="fw-semibold text-secondary">{p.createdBy || 'Admin Staff'}</span>
-                    </td>
-                    <td className="text-end px-4">
-                      <Button variant="light" size="sm" className="rounded-pill border" onClick={() => printReceipt(p)}>
-                        <i className="bi bi-printer-fill me-1"></i>Print
-                      </Button>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan="9" className="text-center py-5 text-muted">
-                    <i className="bi bi-receipt fs-2 d-block mb-2"></i>No fee payments found.
-                  </td></tr>
+                {filteredPayments.length ? filteredPayments.map((payment) => {
+                  const source = sourceMeta[payment.source] || sourceMeta.DIRECT;
+                  return (
+                    <tr key={payment.id || payment._id}>
+                      <td className="px-4">
+                        <div className="fw-bold text-dark">{payment.receiptNumber || 'N/A'}</div>
+                        <small className="text-muted">{getPaymentDate(payment) || 'N/A'}</small>
+                      </td>
+                      <td>
+                        <div className="fw-semibold">{getStudentName(payment)}</div>
+                        <small className="text-muted">{payment.student?.enrollmentNumber || 'N/A'} - {payment.student?.department?.name || 'N/A'}</small>
+                      </td>
+                      <td><Badge bg={source.bg}>{source.label}</Badge></td>
+                      <td>
+                        <div className="fw-semibold small">{payment.admissionId?.admissionNumber || 'N/A'}</div>
+                        <small className="text-muted">{payment.emiId?.emiNumber ? `EMI #${payment.emiId.emiNumber}` : payment.admissionId?.paymentPlan || 'Manual'}</small>
+                      </td>
+                      <td>
+                        <div className="fw-bold">{currency(payment.netAmount)}</div>
+                        <small className="text-muted">Base {currency(payment.amount)}</small>
+                      </td>
+                      <td>
+                        <span className="d-inline-flex align-items-center gap-2">
+                          <i className={`bi ${methodIcons[payment.paymentMethod] || 'bi-credit-card'}`}></i>
+                          {payment.paymentMethod || 'N/A'}
+                        </span>
+                      </td>
+                      <td><Badge bg={payment.status === 'PAID' ? 'success' : payment.status === 'PARTIAL' ? 'warning' : 'secondary'}>{payment.status}</Badge></td>
+                      <td><code className="text-dark">{payment.transactionId || 'N/A'}</code></td>
+                      <td className="text-end px-4">
+                        <Button variant="light" size="sm" className="rounded-pill border" onClick={() => printReceipt(payment)}>
+                          <i className="bi bi-printer-fill me-1"></i>Print
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr><td colSpan="9" className="text-center py-5 text-muted">No finance transactions found.</td></tr>
                 )}
               </tbody>
             </Table>
@@ -344,80 +590,68 @@ const Fees = () => {
         </Card>
       )}
 
-      {/* Record Payment Modal */}
       <Modal show={showPayModal} onHide={() => setShowPayModal(false)} size="lg" centered>
         <Modal.Header closeButton className="border-0 bg-light">
-          <Modal.Title className="fw-bold">Record Fee Payment Transaction</Modal.Title>
+          <Modal.Title className="fw-bold">Record Manual Transaction</Modal.Title>
         </Modal.Header>
-        <Form onSubmit={handlePay}>
+        <Form onSubmit={recordManualPayment}>
           <Modal.Body className="px-4 py-4">
             <Row className="g-3">
               <Col md={6}>
                 <Form.Label className="text-muted small fw-bold">Student</Form.Label>
-                <Form.Select value={form.studentId} onChange={e => setForm({...form, studentId: e.target.value})} required className="rounded-3">
+                <Form.Select value={form.student} onChange={(event) => updateForm('student', event.target.value)} required>
                   <option value="">Select Student</option>
-                  {students.map(st => (
-                    <option key={st.id} value={st.id}>[{st.enrollmentNumber}] {st.firstName} {st.lastName}</option>
+                  {students.map((student) => (
+                    <option key={student.id || student._id} value={student.id || student._id}>
+                      [{student.enrollmentNumber}] {student.firstName} {student.lastName}
+                    </option>
                   ))}
                 </Form.Select>
               </Col>
               <Col md={6}>
-                <Form.Label className="text-muted small fw-bold">Semester</Form.Label>
-                <Form.Control type="text" placeholder="e.g. Semester III" value={form.semester}
-                  onChange={e => setForm({...form, semester: e.target.value})} required className="rounded-3" />
+                <Form.Label className="text-muted small fw-bold">Fee Type</Form.Label>
+                <Form.Control value={form.feeType} onChange={(event) => updateForm('feeType', event.target.value)} required />
               </Col>
-              
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Label className="text-muted small fw-bold">Base Amount</Form.Label>
-                <Form.Control type="number" step="0.01" value={form.amount}
-                  onChange={e => setForm({...form, amount: e.target.value})} required className="rounded-3" />
+                <Form.Control type="number" min="0" step="0.01" value={form.amount} onChange={(event) => updateForm('amount', event.target.value)} required />
               </Col>
-              <Col md={4}>
-                <Form.Label className="text-muted small fw-bold">Discount Amount</Form.Label>
-                <Form.Control type="number" step="0.01" value={form.discountAmount}
-                  onChange={e => setForm({...form, discountAmount: e.target.value})} className="rounded-3" />
+              <Col md={3}>
+                <Form.Label className="text-muted small fw-bold">Discount</Form.Label>
+                <Form.Control type="number" min="0" step="0.01" value={form.discountAmount} onChange={(event) => updateForm('discountAmount', event.target.value)} />
               </Col>
-              <Col md={4}>
-                <Form.Label className="text-muted small fw-bold">Fine Amount</Form.Label>
-                <Form.Control type="number" step="0.01" value={form.fineAmount}
-                  onChange={e => setForm({...form, fineAmount: e.target.value})} className="rounded-3" />
+              <Col md={3}>
+                <Form.Label className="text-muted small fw-bold">Fine</Form.Label>
+                <Form.Control type="number" min="0" step="0.01" value={form.fineAmount} onChange={(event) => updateForm('fineAmount', event.target.value)} />
               </Col>
-
+              <Col md={3}>
+                <Form.Label className="text-muted small fw-bold">Semester</Form.Label>
+                <Form.Control type="number" min="1" value={form.semester} onChange={(event) => updateForm('semester', event.target.value)} />
+              </Col>
               <Col md={4}>
                 <Form.Label className="text-muted small fw-bold">Payment Method</Form.Label>
-                <Form.Select value={form.paymentMethod} onChange={e => setForm({...form, paymentMethod: e.target.value})} className="rounded-3">
+                <Form.Select value={form.paymentMethod} onChange={(event) => updateForm('paymentMethod', event.target.value)}>
                   <option value="CASH">Cash</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
                   <option value="UPI">UPI</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CARD">Card</option>
                   <option value="CHEQUE">Cheque</option>
                   <option value="DD">Demand Draft</option>
                 </Form.Select>
               </Col>
-              <Col md={4}>
-                <Form.Label className="text-muted small fw-bold">Transaction / Ref ID</Form.Label>
-                <Form.Control type="text" placeholder="For Online / Cheque payments" value={form.transactionId}
-                  onChange={e => setForm({...form, transactionId: e.target.value})} className="rounded-3" />
+              <Col md={8}>
+                <Form.Label className="text-muted small fw-bold">Transaction / Reference ID</Form.Label>
+                <Form.Control value={form.transactionId} onChange={(event) => updateForm('transactionId', event.target.value)} placeholder="UPI, card, cheque, or bank reference" />
               </Col>
-              <Col md={4}>
-                <Form.Label className="text-muted small fw-bold">Payment Category</Form.Label>
-                <Form.Select value={form.paymentType} onChange={e => setForm({...form, paymentType: e.target.value})} className="rounded-3">
-                  <option value="INITIAL">Initial / Enrollment Fee</option>
-                  <option value="EMI">EMI / Installment</option>
-                </Form.Select>
-              </Col>
-
               <Col md={12}>
-                <Form.Group>
-                  <Form.Label className="text-muted small fw-bold">Collector Remarks</Form.Label>
-                  <Form.Control as="textarea" rows={2} placeholder="Add specific bank details, check numbers or notes..." value={form.remarks}
-                    onChange={e => setForm({...form, remarks: e.target.value})} className="rounded-3" />
-                </Form.Group>
+                <Form.Label className="text-muted small fw-bold">Remarks</Form.Label>
+                <Form.Control as="textarea" rows={2} value={form.remarks} onChange={(event) => updateForm('remarks', event.target.value)} />
               </Col>
             </Row>
           </Modal.Body>
           <Modal.Footer className="border-0 bg-light">
             <Button variant="light" onClick={() => setShowPayModal(false)} className="rounded-pill px-4">Cancel</Button>
-            <Button variant="primary" type="submit" className="rounded-pill px-4 shadow-sm" disabled={submitting}>
+            <Button variant="primary" type="submit" className="rounded-pill px-4" disabled={submitting}>
               {submitting ? 'Recording...' : 'Record Transaction'}
             </Button>
           </Modal.Footer>

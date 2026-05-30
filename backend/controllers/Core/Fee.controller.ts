@@ -8,6 +8,9 @@ import {
   deleteFeeService,
 } from "../../Services/Core/Fee.service.ts";
 
+const getId = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+
 export const createFeeRecord = async (req: Request, res: Response) => {
   try {
     const fee = await createFeeRecordService(req.body);
@@ -20,11 +23,29 @@ export const createFeeRecord = async (req: Request, res: Response) => {
 export const searchFees = async (req: Request, res: Response) => {
   try {
     const {
-      studentId, status, semester, dateFrom, dateTo, keyword, feeType, size, page
+      studentId,
+      status,
+      semester,
+      dateFrom,
+      dateTo,
+      keyword,
+      feeType,
+      paymentMethod,
+      source,
+      size,
+      page,
     } = req.query as Record<string, string>;
 
     const result = await searchFeesService({
-      studentId, status, semester, dateFrom, dateTo, keyword, feeType,
+      studentId,
+      status,
+      semester,
+      dateFrom,
+      dateTo,
+      keyword,
+      feeType,
+      paymentMethod,
+      source,
       size: size ? parseInt(size) : 50,
       page: page ? parseInt(page) : 1,
     });
@@ -36,7 +57,8 @@ export const searchFees = async (req: Request, res: Response) => {
 
 export const getFeeById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Fee id is required" });
     const fee = await getFeeByIdService(id);
     if (!fee) return res.status(404).json({ success: false, message: "Fee record not found" });
     res.status(200).json({ success: true, data: fee });
@@ -56,8 +78,9 @@ export const getTotalCollected = async (_req: Request, res: Response) => {
 
 export const updateFeeStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getId(req.params.id);
     const { status } = req.body;
+    if (!id) return res.status(400).json({ success: false, message: "Fee id is required" });
     const fee = await updateFeeStatusService(id, status);
     res.status(200).json({ success: true, data: fee });
   } catch (error: any) {
@@ -67,7 +90,8 @@ export const updateFeeStatus = async (req: Request, res: Response) => {
 
 export const deleteFee = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = getId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Fee id is required" });
     await deleteFeeService(id);
     res.status(200).json({ success: true, message: "Fee record deleted" });
   } catch (error: any) {
