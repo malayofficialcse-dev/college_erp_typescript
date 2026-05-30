@@ -137,9 +137,21 @@ const Employees = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...currentEmployee, department: currentEmployee.departmentId ? { id: currentEmployee.departmentId } : null };
-      if (isEdit) await api.put(`/employees/${currentEmployee.id || currentEmployee._id}`, payload);
-      else await api.post('/employees', payload);
+      const payload = {
+        ...currentEmployee,
+        department: currentEmployee.departmentId || undefined,
+      };
+      delete payload.departmentId;
+      if (!isEdit) {
+        if (!payload.employeeCode) delete payload.employeeCode;
+        if (!payload.email) delete payload.email;
+      }
+
+      if (isEdit) {
+        await api.put(`/employees/${currentEmployee.id || currentEmployee._id}`, payload);
+      } else {
+        await api.post('/employees', payload);
+      }
       setShowModal(false);
       fetchEmployees(currentPage, true);
     } catch (error) {
@@ -316,8 +328,15 @@ const Employees = () => {
             <Row className="g-4">
               <Col md={4}>
                 <Form.Group>
-                  <Form.Label className="text-muted small fw-bold uppercase">Employee Code *</Form.Label>
-                  <Form.Control className="rounded-3" required value={currentEmployee.employeeCode} onChange={e => setCurrentEmployee({...currentEmployee, employeeCode: e.target.value})} disabled={isEdit} />
+                  <Form.Label className="text-muted small fw-bold uppercase">Employee Code</Form.Label>
+                  <Form.Control
+                    className="rounded-3"
+                    placeholder={isEdit ? '' : 'Auto-generated on save'}
+                    value={currentEmployee.employeeCode}
+                    onChange={e => setCurrentEmployee({...currentEmployee, employeeCode: e.target.value})}
+                    disabled={!isEdit}
+                    required={isEdit}
+                  />
                 </Form.Group>
               </Col>
               <Col md={4}>
@@ -353,8 +372,16 @@ const Employees = () => {
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="text-muted small fw-bold">Email *</Form.Label>
-                  <Form.Control className="rounded-3" type="email" required value={currentEmployee.email} onChange={e => setCurrentEmployee({...currentEmployee, email: e.target.value})} />
+                  <Form.Label className="text-muted small fw-bold">Email</Form.Label>
+                  <Form.Control
+                    className="rounded-3"
+                    type="email"
+                    placeholder={isEdit ? '' : 'Auto-generated from name'}
+                    value={currentEmployee.email}
+                    onChange={e => setCurrentEmployee({...currentEmployee, email: e.target.value})}
+                    disabled={!isEdit}
+                    required={isEdit}
+                  />
                 </Form.Group>
               </Col>
               <Col md={6}>
