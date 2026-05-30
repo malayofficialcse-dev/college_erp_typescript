@@ -9,11 +9,22 @@ import {
 
 export const createEmployee = async (req: Request, res: Response) => {
   try {
-    const employee = await createEmployeeService(req.body);
+    const result = await createEmployeeService(req.body);
     res.status(201).json({
       success: true,
-      message: "Employee created successfully",
-      data: employee,
+      message: "Employee and user account created successfully",
+      data: {
+        employee: result.employee,
+        userAccount: result.userAccount ? {
+          id: result.userAccount._id,
+          username: result.userAccount.username,
+          email: result.userAccount.email,
+          fullName: result.userAccount.fullName,
+          roles: result.userAccount.roles,
+        } : null,
+        tempPassword: result.tempPassword,
+        error: result.error || null,
+      },
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

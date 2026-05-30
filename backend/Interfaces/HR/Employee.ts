@@ -22,4 +22,6 @@ export interface IEmployee extends Document {
   address?: string;
   department?: Types.ObjectId;
   status: EmployeeStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

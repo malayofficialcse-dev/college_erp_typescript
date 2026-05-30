@@ -1,11 +1,14 @@
 import Employee from "../../Models/HR/Employee.ts";
 import type { EmployeeType, EmployeeStatus } from "../../Interfaces/HR/index.ts";
+import UserAccountService from "../Auth/UserAccount.ts";
+import { generateEmployeeCode } from "./employeeCodeGenerator.ts";
+import { generateEmailFromName } from "./emailGenerator.ts";
 
 export interface ICreateEmployeeInput {
-  employeeCode: string;
+  employeeCode?: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   phone: string;
   designation: string;
   employeeType?: EmployeeType;
@@ -16,16 +19,93 @@ export interface ICreateEmployeeInput {
   department?: string;
   status?: EmployeeStatus;
 }
-  //kecbwucb
+
+const userAccountService = new UserAccountService();
 
 export const createEmployeeService = async (data: ICreateEmployeeInput) => {
-  const existing = await Employee.findOne({
-    $or: [{ employeeCode: data.employeeCode }, { email: data.email }],
-  });
-  if (existing) {
-    throw new Error("Employee with same code or email already exists");
+  try {
+    // Auto-generate employee code if not provided
+    if (!data.employeeCode) {
+      data.employeeCode = await generateEmployeeCode();
+    }
+
+    // Auto-generate email if not provided
+    if (!data.email) {
+      data.email = generateEmailFromName(data.firstName, data.lastName);
+    }
+
+    // Check for existing employee
+    const existing = await Employee.findOne({
+      $or: [{ employeeCode: data.employeeCode }, { email: data.email }],
+    });
+    if (existing) {
+      throw new Error("Employee with same code or email already exists");
+    }
+
+    // Create employee
+    const employee = await Employee.create(data);
+
+    // Auto-create UserAccount
+    const fullName = `${data.firstName} ${data.lastName}`;
+    const tempPassword = generateTemporaryPassword();
+
+    try {
+      const userAccount = await userAccountService.createUserAccount({
+        username: data.employeeCode,
+        email: data.email,
+        password: tempPassword,
+        fullName: fullName,
+        roles: ["ROLE_STAFF"],
+        enabled: true,
+        employee: employee._id,
+      });
+
+      return {
+        employee,
+        userAccount,
+        tempPassword,
+      };
+    } catch (error) {
+      // If user account creation fails, we still keep the employee but log the error
+      console.error(
+        "Failed to create user account for employee:",
+        error instanceof Error ? error.message : "unknown error"
+      );
+      return {
+        employee,
+        userAccount: null,
+        error: error instanceof Error ? error.message : "Failed to create user account",
+      };
+    }
+  } catch (error) {
+    throw new Error(
+      `Failed to create employee: ${error instanceof Error ? error.message : "unknown error"}`
+    );
   }
-  return Employee.create(data);
+};
+
+/**
+ * Generates a temporary password (12 characters: uppercase, lowercase, numbers, special chars)
+ */
+const generateTemporaryPassword = (): string => {
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%^&*";
+
+  const allChars = uppercase + lowercase + numbers + special;
+  let password = "";
+
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += special[Math.floor(Math.random() * special.length)];
+
+  for (let i = 4; i < 12; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  return password.split("").sort(() => Math.random() - 0.5).join("");
 };
 
 export const getAllEmployeesService = async (filter: {

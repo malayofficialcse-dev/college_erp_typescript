@@ -123,12 +123,12 @@ class UserAccountService {
     }
   }
 
-  async authenticate(usernameOrEmail: string, password: string): Promise<IUserAccount | null> {
+  async authenticate(usernameOrEmailOrCode: string, password: string): Promise<IUserAccount | null> {
     try {
-      const query =
-        usernameOrEmail.includes("@")
-          ? { email: usernameOrEmail }
-          : { username: usernameOrEmail };
+      // Support login with username, email, or employee code
+      const query = usernameOrEmailOrCode.includes("@")
+        ? { email: usernameOrEmailOrCode }
+        : { $or: [{ username: usernameOrEmailOrCode }] };
 
       const userAccount = await UserAccount.findOne(query).select("+password");
       if (!userAccount) {
