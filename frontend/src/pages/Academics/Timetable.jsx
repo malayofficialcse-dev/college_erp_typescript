@@ -13,7 +13,14 @@ const Timetable = () => {
   // Advanced Filters State
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [selectedDays, setSelectedDays] = useState([]);
+  const [selectedTeachers, setSelectedTeachers] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [roomKeyword, setRoomKeyword] = useState("");
+  const [startTimeFrom, setStartTimeFrom] = useState("");
+  const [endTimeTo, setEndTimeTo] = useState("");
+
+
 
   const daysOfWeek = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
@@ -138,15 +145,42 @@ const Timetable = () => {
     }
   };
 
+  const toMinutes = (time = "") => {
+    // Expect HH:mm
+    const [h = "0", m = "0"] = time.split(":");
+    const hh = Number.parseInt(h, 10);
+    const mm = Number.parseInt(m, 10);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+    return hh * 60 + mm;
+  };
+
   const getFilteredTimetables = () => {
-    return timetables.filter(t => {
+    const fromMins = startTimeFrom ? toMinutes(startTimeFrom) : null;
+    const toMins = endTimeTo ? toMinutes(endTimeTo) : null;
+
+    return timetables.filter((t) => {
       const matchCourse = selectedCourses.length === 0 || selectedCourses.includes(t.courseId?.toString());
       const matchDay = selectedDays.length === 0 || selectedDays.includes(t.dayOfWeek);
-      const matchSearch = (t.subjectName || "").toLowerCase().includes(searchKeyword.toLowerCase()) || 
-                          (t.teacherName || "").toLowerCase().includes(searchKeyword.toLowerCase());
-      return matchCourse && matchDay && matchSearch;
+      const matchTeacher = selectedTeachers.length === 0 || selectedTeachers.includes(t.teacherId?.toString());
+      const matchSubject = selectedSubjects.length === 0 || selectedSubjects.includes(t.subjectId?.toString());
+
+      const keyword = searchKeyword.trim().toLowerCase();
+      const matchSearch = keyword.length === 0 ||
+        (t.subjectName || "").toLowerCase().includes(keyword) ||
+        (t.teacherName || "").toLowerCase().includes(keyword);
+
+      const roomKey = roomKeyword.trim().toLowerCase();
+      const matchRoom = roomKey.length === 0 || (t.room || "").toLowerCase().includes(roomKey);
+
+      const tStart = toMinutes(t.startTime);
+      const tEnd = toMinutes(t.endTime);
+      const matchStartFrom = fromMins === null || (tStart !== null && tStart >= fromMins);
+      const matchEndTo = toMins === null || (tEnd !== null && tEnd <= toMins);
+
+      return matchCourse && matchDay && matchTeacher && matchSubject && matchSearch && matchRoom && matchStartFrom && matchEndTo;
     });
   };
+
 
   const filteredTimetables = getFilteredTimetables();
 
@@ -163,6 +197,8 @@ const Timetable = () => {
       <Card className="mb-4 shadow-sm border-0">
         <Card.Body className="d-flex flex-wrap gap-3 align-items-center bg-light rounded">
           <div className="fw-semibold text-secondary me-2"><i className="bi bi-funnel-fill me-1"></i> Filters:</div>
+
+
           
           <Dropdown>
             <Dropdown.Toggle variant="white" className="border shadow-sm">
@@ -200,6 +236,42 @@ const Timetable = () => {
             </Dropdown.Menu>
           </Dropdown>
 
+          <Dropdown>
+            <Dropdown.Toggle variant="white" className="border shadow-sm">
+              Teachers {selectedTeachers.length > 0 && <Badge bg="primary" className="ms-1">{selectedTeachers.length}</Badge>}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="p-2 shadow" style={{ minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
+              {teachers.map((t) => (
+                <Form.Check
+                  key={t.id}
+                  type="checkbox"
+                  label={`${t.firstName} ${t.lastName}`.trim()}
+                  checked={selectedTeachers.includes(t.id.toString())}
+                  onChange={() => toggleFilter(setSelectedTeachers, selectedTeachers, t.id.toString())}
+                  className="mb-1"
+                />
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+
+          <Dropdown>
+            <Dropdown.Toggle variant="white" className="border shadow-sm">
+              Subjects {selectedSubjects.length > 0 && <Badge bg="primary" className="ms-1">{selectedSubjects.length}</Badge>}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="p-2 shadow" style={{ minWidth: '220px', maxHeight: '300px', overflowY: 'auto' }}>
+              {subjects.map((s) => (
+                <Form.Check
+                  key={s.id}
+                  type="checkbox"
+                  label={s.name}
+                  checked={selectedSubjects.includes(s.id.toString())}
+                  onChange={() => toggleFilter(setSelectedSubjects, selectedSubjects, s.id.toString())}
+                  className="mb-1"
+                />
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+
           <Form.Control 
             type="text" 
             placeholder="Search subject or teacher..." 
@@ -209,15 +281,49 @@ const Timetable = () => {
             className="shadow-sm border-white"
           />
 
-          {(selectedCourses.length > 0 || selectedDays.length > 0 || searchKeyword) && (
+          <Form.Control 
+            type="text" 
+            placeholder="Room (optional)..." 
+            value={roomKeyword}
+            onChange={(e) => setRoomKeyword(e.target.value)}
+            style={{ maxWidth: '230px' }}
+            className="shadow-sm border-white"
+          />
+
+          <div className="d-flex align-items-center gap-2" style={{ maxWidth: 360 }}>
+            <Form.Control
+              type="time"
+              value={startTimeFrom}
+              onChange={(e) => setStartTimeFrom(e.target.value)}
+              className="shadow-sm border-white"
+              aria-label="Start time from"
+            />
+            <div className="text-secondary">to</div>
+            <Form.Control
+              type="time"
+              value={endTimeTo}
+              onChange={(e) => setEndTimeTo(e.target.value)}
+              className="shadow-sm border-white"
+              aria-label="End time to"
+            />
+          </div>
+
+
+          {(selectedCourses.length > 0 || selectedDays.length > 0 || selectedTeachers.length > 0 || selectedSubjects.length > 0 || searchKeyword || roomKeyword || startTimeFrom || endTimeTo) && (
             <Button variant="link" className="text-danger text-decoration-none ms-auto" onClick={() => {
               setSelectedCourses([]);
               setSelectedDays([]);
+              setSelectedTeachers([]);
+              setSelectedSubjects([]);
               setSearchKeyword("");
+              setRoomKeyword("");
+              setStartTimeFrom("");
+              setEndTimeTo("");
             }}>
               Clear Filters
             </Button>
           )}
+
         </Card.Body>
       </Card>
 
