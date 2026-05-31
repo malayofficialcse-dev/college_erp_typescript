@@ -5,6 +5,7 @@ import {
   getEmployeeByIdService,
   updateEmployeeService,
   deleteEmployeeService,
+  ensureUserAccountForEmployee,
 } from "../../Services/HR/Employee.service.ts";
 
 export const createEmployee = async (req: Request, res: Response) => {
@@ -12,17 +13,21 @@ export const createEmployee = async (req: Request, res: Response) => {
     const result = await createEmployeeService(req.body);
     res.status(201).json({
       success: true,
-      message: "Employee and user account created successfully",
+      message:
+        "Employee created. Login with employee code or email. Default password is the employee code.",
       data: {
         employee: result.employee,
-        userAccount: result.userAccount ? {
-          id: result.userAccount._id,
-          username: result.userAccount.username,
-          email: result.userAccount.email,
-          fullName: result.userAccount.fullName,
-          roles: result.userAccount.roles,
-        } : null,
+        userAccount: result.userAccount
+          ? {
+              id: result.userAccount._id,
+              username: result.userAccount.username,
+              email: result.userAccount.email,
+              fullName: result.userAccount.fullName,
+              roles: result.userAccount.roles,
+            }
+          : null,
         tempPassword: result.tempPassword,
+        loginHint: result.loginHint,
         error: result.error || null,
       },
     });
@@ -113,6 +118,44 @@ export const deleteEmployee = async (req: Request, res: Response) => {
     res
       .status(200)
       .json({ success: true, message: "Employee deleted successfully" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createEmployeeUserAccount = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Employee id is required" });
+    }
+
+    const result = await ensureUserAccountForEmployee(
+      id,
+      req.body?.password
+    );
+
+    res.status(result.created ? 201 : 200).json({
+      success: true,
+      message: result.created
+        ? "User account created successfully"
+        : "User account already exists",
+      data: {
+        userAccount: result.userAccount
+          ? {
+              id: result.userAccount._id,
+              username: result.userAccount.username,
+              email: result.userAccount.email,
+              fullName: result.userAccount.fullName,
+              roles: result.userAccount.roles,
+            }
+          : null,
+        tempPassword: result.tempPassword,
+        created: result.created,
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

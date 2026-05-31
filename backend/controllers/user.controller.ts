@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import UserAccountService from "../Services/Auth/UserAccount.ts";
 import UserPermission from "../Models/Auth/UserPermission.ts";
+import { resolveUserPermissions } from "../Services/Auth/UserPermission.service.ts";
+import UserAccount from "../Models/Auth/UserAccount.ts";
 
 const userAccountService = new UserAccountService();
 
@@ -68,6 +70,35 @@ export const getSingleUserController = async (req: Request, res: Response) => {
   }
 };
 
+export const getUserEmployeeController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User id is required" });
+    }
+
+    const user = await UserAccount.findById(userId).populate({
+      path: "employee",
+      populate: { path: "department", select: "name code" },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.employee) {
+      return res.status(404).json({
+        success: false,
+        message: "No employee profile linked to this account",
+      });
+    }
+
+    res.status(200).json({ success: true, data: user.employee });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getUserPermissionsController = async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
@@ -75,8 +106,15 @@ export const getUserPermissionsController = async (req: Request, res: Response) 
       return res.status(400).json({ success: false, message: "User id is required" });
     }
 
-    const permissions = await UserPermission.find({ user: userId }).select("-__v").lean();
-    res.status(200).json({ success: true, data: permissions });
+    const permissions = await UserPermission.find({ user: userId })
+      .select("-__v")
+      .lean();
+    const user = await UserAccount.findById(userId).select("roles").lean();
+
+    res.status(200).json({
+      success: true,
+      data: resolveUserPermissions(permissions, user?.roles || []),
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

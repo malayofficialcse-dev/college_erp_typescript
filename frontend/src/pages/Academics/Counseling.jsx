@@ -36,7 +36,7 @@ const Counseling = () => {
 
   useEffect(() => {
     // We assume academics view permission gives access to counseling
-    if (hasPermission('academics', 'view')) {
+    if (hasPermission('counseling', 'view')) {
       fetchCounselings();
       fetchCourses();
     } else {
@@ -154,7 +154,7 @@ const Counseling = () => {
     navigate('/admissions', { state: { counselingData: counseling } });
   };
 
-  if (!hasPermission('academics', 'view')) {
+  if (!hasPermission('counseling', 'view')) {
     return (
       <div className="container-fluid mt-4">
         <Alert variant="danger" className="shadow-sm border-0">
@@ -172,7 +172,7 @@ const Counseling = () => {
           <h2 className="text-dark fw-bold mb-0">Counseling Desk</h2>
           <p className="text-muted small mb-0">Manage prospective students and admission inquiries</p>
         </div>
-        {hasPermission('academics', 'create') && (
+        {hasPermission('counseling', 'create') && (
           <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => handleOpenModal()}>
             <i className="bi bi-plus-circle-fill me-2"></i>New Inquiry
           </Button>

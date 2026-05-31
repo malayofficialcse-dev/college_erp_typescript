@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, Row, Col, Form, Button, Badge, Alert, Spinner } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { fetchMyEmployee } from '../../services/employeeSelfService';
 
 const MyProfile = () => {
   const { user } = useContext(AuthContext);
@@ -20,9 +21,7 @@ const MyProfile = () => {
   const fetchMyProfile = async () => {
     try {
       setLoading(true);
-      // Fetch employee by email linked to the logged-in user
-      const res = await api.get('/employees/search', { params: { keyword: user?.email, size: 1 } });
-      const emp = res.data.content?.[0] || null;
+      const emp = await fetchMyEmployee(user);
       setEmployee(emp);
       if (emp) setFormData({ ...emp, departmentId: emp.department?.id || '' });
     } catch (err) {

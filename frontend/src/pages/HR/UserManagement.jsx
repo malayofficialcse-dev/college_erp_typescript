@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Row, Col, Badge, Card, Spinner, Alert } from 'react-bootstrap';
+import { Table, Button, Modal, Form, Badge, Card, Spinner, Alert } from 'react-bootstrap';
 import api from '../../services/api';
+import {
+  PAGE_PERMISSION_GROUPS,
+  PAGE_BY_KEY,
+  initializePagePermissions,
+} from '../../config/pagePermissions';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Permission Modal State
   const [showPermModal, setShowPermModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPermissions, setUserPermissions] = useState([]);
   const [savingPerms, setSavingPerms] = useState(false);
 
-  // Edit Roles/Status State
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUserData, setEditUserData] = useState({
     id: '',
@@ -22,19 +25,6 @@ const UserManagement = () => {
     enabled: true
   });
   const [savingUser, setSavingUser] = useState(false);
-
-  const availableModules = [
-    { key: 'students', label: 'Student Directory' },
-    { key: 'employees', label: 'Staff Registry' },
-    { key: 'departments', label: 'Departments' },
-    { key: 'payroll', label: 'Payroll & Salary' },
-    { key: 'academics', label: 'Academics & Timetable' },
-    { key: 'library', label: 'Library Management' },
-    { key: 'hostel', label: 'Hostel & Housing' },
-    { key: 'transport', label: 'Transportation' },
-    { key: 'finance', label: 'Finance & Invoices' },
-    { key: 'notices', label: 'Notice & Campus Events' }
-  ];
 
   const availableRoles = [
     { value: 'ROLE_ADMIN', label: 'Admin' },
@@ -55,7 +45,6 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const response = await api.get('/users');
-      // In the real backend, user list is a List, but handle any page/array structure just in case
       const data = response.data.content || response.data;
       setUsers(Array.isArray(data) ? data : []);
       setError(null);
@@ -82,9 +71,8 @@ const UserManagement = () => {
       const currentRoles = [...prev.roles];
       if (currentRoles.includes(role)) {
         return { ...prev, roles: currentRoles.filter(r => r !== role) };
-      } else {
-        return { ...prev, roles: [...currentRoles, role] };
       }
+      return { ...prev, roles: [...currentRoles, role] };
     });
   };
 
@@ -112,23 +100,7 @@ const UserManagement = () => {
       setSavingPerms(true);
       setShowPermModal(true);
       const response = await api.get(`/users/${user.id}/permissions`);
-      
-      // Map returned permissions to include all modules
-      const fetchedPerms = response.data || [];
-      const initializedPerms = availableModules.map(mod => {
-        const found = fetchedPerms.find(p => p.moduleName === mod.key);
-        return found ? {
-          ...found
-        } : {
-          moduleName: mod.key,
-          canView: false,
-          canCreate: false,
-          canEdit: false,
-          canDelete: false
-        };
-      });
-      
-      setUserPermissions(initializedPerms);
+      setUserPermissions(initializePagePermissions(response.data || []));
     } catch (err) {
       console.error('Error loading permissions:', err);
       alert('Failed to load user permissions.');
@@ -138,18 +110,18 @@ const UserManagement = () => {
     }
   };
 
-  const handlePermissionChange = (moduleKey, action) => {
+  const handlePermissionChange = (pageKey, action) => {
     setUserPermissions(prev => prev.map(p => {
-      if (p.moduleName === moduleKey) {
+      if (p.moduleName === pageKey) {
         return { ...p, [action]: !p[action] };
       }
       return p;
     }));
   };
 
-  const handleToggleAllForModule = (moduleKey, setAllTo) => {
+  const handleToggleAllForPage = (pageKey, setAllTo) => {
     setUserPermissions(prev => prev.map(p => {
-      if (p.moduleName === moduleKey) {
+      if (p.moduleName === pageKey) {
         return {
           ...p,
           canView: setAllTo,
@@ -162,12 +134,28 @@ const UserManagement = () => {
     }));
   };
 
+  const handleToggleAllForGroup = (groupTitle, setAllTo) => {
+    const group = PAGE_PERMISSION_GROUPS.find(item => item.title === groupTitle);
+    if (!group) return;
+
+    const pageKeys = new Set(group.pages.map(page => page.key));
+    setUserPermissions(prev => prev.map(p => {
+      if (!pageKeys.has(p.moduleName)) return p;
+      return {
+        ...p,
+        canView: setAllTo,
+        canCreate: setAllTo,
+        canEdit: setAllTo,
+        canDelete: setAllTo
+      };
+    }));
+  };
+
   const handleSavePermissions = async () => {
     try {
       setSavingPerms(true);
       await api.put(`/users/${selectedUser.id}/permissions`, userPermissions);
       setShowPermModal(false);
-      // Optional: show a beautiful toast
     } catch (err) {
       console.error('Error saving permissions:', err);
       alert('Failed to update user permissions.');
@@ -188,12 +176,16 @@ const UserManagement = () => {
     }
   };
 
+  const permissionMap = Object.fromEntries(
+    userPermissions.map(permission => [permission.moduleName, permission])
+  );
+
   return (
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4 mt-2">
         <div>
           <h2 className="text-dark fw-bold mb-0">User Access Management</h2>
-          <p className="text-muted mb-0 small">Manage user login credentials, security roles, and granular module permissions.</p>
+          <p className="text-muted mb-0 small">Manage user login credentials, security roles, and page-level permissions.</p>
         </div>
         <Button variant="outline-primary" className="rounded-pill px-3 shadow-none fw-semibold" onClick={fetchUsers} disabled={loading}>
           <i className={`bi bi-arrow-clockwise me-2 ${loading ? 'spin-animation' : ''}`}></i>Refresh List
@@ -288,7 +280,6 @@ const UserManagement = () => {
         </Card>
       )}
 
-      {/* Account Info & Roles Edit Modal */}
       <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
         <Modal.Header closeButton className="border-0 bg-light">
           <Modal.Title className="fw-bold">Modify Access Settings</Modal.Title>
@@ -296,13 +287,13 @@ const UserManagement = () => {
         <Form onSubmit={handleSaveUser}>
           <Modal.Body className="px-4 py-4">
             <h6 className="fw-bold text-secondary mb-3">User: {editUserData.fullName}</h6>
-            
+
             <Form.Group className="mb-4">
               <Form.Label className="text-muted small fw-bold">Login Enabled</Form.Label>
-              <Form.Check 
+              <Form.Check
                 type="switch"
                 id="user-enabled-switch"
-                label={editUserData.enabled ? "Account is active and allowed to login" : "Account is suspended/disabled"}
+                label={editUserData.enabled ? 'Account is active and allowed to login' : 'Account is suspended/disabled'}
                 checked={editUserData.enabled}
                 onChange={(e) => setEditUserData(prev => ({ ...prev, enabled: e.target.checked }))}
                 className="fw-medium text-dark"
@@ -313,7 +304,7 @@ const UserManagement = () => {
               <Form.Label className="text-muted small fw-bold mb-2">Security Roles</Form.Label>
               <div className="d-flex flex-column gap-2 p-3 bg-light rounded-3 border">
                 {availableRoles.map(role => (
-                  <Form.Check 
+                  <Form.Check
                     key={role.value}
                     type="checkbox"
                     id={`role-check-${role.value}`}
@@ -335,12 +326,13 @@ const UserManagement = () => {
         </Form>
       </Modal>
 
-      {/* Permissions Management Matrix Modal */}
       <Modal show={showPermModal} onHide={() => setShowPermModal(false)} size="xl" centered scrollable>
         <Modal.Header closeButton className="border-0 bg-light px-4">
           <div>
             <Modal.Title className="fw-bold">Dynamic Permission Matrix</Modal.Title>
-            <p className="text-muted mb-0 small">Assign custom system access privileges for {selectedUser?.fullName || selectedUser?.username}.</p>
+            <p className="text-muted mb-0 small">
+              Assign page-level access for {selectedUser?.fullName || selectedUser?.username}. Each sidebar page can have View, Create, Edit, and Delete permissions.
+            </p>
           </div>
         </Modal.Header>
         <Modal.Body className="px-4 py-3">
@@ -354,90 +346,124 @@ const UserManagement = () => {
               {selectedUser?.roles?.includes('ROLE_ADMIN') && (
                 <Alert variant="warning" className="border-0 shadow-sm mb-4">
                   <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  <strong>Notice:</strong> This user has the **Admin** role. Administrators automatically possess full override permissions (Create, Edit, Delete, View) across all systems, regardless of the matrix below.
+                  <strong>Notice:</strong> This user has the Admin role. Administrators automatically possess full override permissions across all pages, regardless of the matrix below.
                 </Alert>
               )}
 
-              <Table responsive borderless className="align-middle">
-                <thead>
-                  <tr className="border-bottom text-muted small">
-                    <th className="py-2.5" style={{ width: '30%' }}>System Module</th>
-                    <th className="text-center">View (Read)</th>
-                    <th className="text-center">Create (Write)</th>
-                    <th className="text-center">Edit (Update)</th>
-                    <th className="text-center">Delete (Destroy)</th>
-                    <th className="text-end px-3">Module Access</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userPermissions.map(p => {
-                    const mod = availableModules.find(m => m.key === p.moduleName) || { label: p.moduleName };
-                    const hasAll = p.canView && p.canCreate && p.canEdit && p.canDelete;
-                    const hasNone = !p.canView && !p.canCreate && !p.canEdit && !p.canDelete;
-                    
-                    return (
-                      <tr key={p.moduleName} className="border-bottom hover-row">
-                        <td className="py-3">
-                          <span className="fw-bold text-dark d-block">{mod.label}</span>
-                          <code className="text-muted small" style={{ fontSize: '0.75rem' }}>module: {p.moduleName}</code>
-                        </td>
-                        <td className="text-center">
-                          <Form.Check 
-                            type="checkbox"
-                            checked={p.canView}
-                            onChange={() => handlePermissionChange(p.moduleName, 'canView')}
-                            inline
-                          />
-                        </td>
-                        <td className="text-center">
-                          <Form.Check 
-                            type="checkbox"
-                            checked={p.canCreate}
-                            onChange={() => handlePermissionChange(p.moduleName, 'canCreate')}
-                            inline
-                          />
-                        </td>
-                        <td className="text-center">
-                          <Form.Check 
-                            type="checkbox"
-                            checked={p.canEdit}
-                            onChange={() => handlePermissionChange(p.moduleName, 'canEdit')}
-                            inline
-                          />
-                        </td>
-                        <td className="text-center">
-                          <Form.Check 
-                            type="checkbox"
-                            checked={p.canDelete}
-                            onChange={() => handlePermissionChange(p.moduleName, 'canDelete')}
-                            inline
-                          />
-                        </td>
-                        <td className="text-end px-3">
-                          <div className="btn-group btn-group-sm">
-                            <Button 
-                              variant={hasAll ? 'success' : 'outline-secondary'} 
-                              size="sm"
-                              className="px-2"
-                              onClick={() => handleToggleAllForModule(p.moduleName, true)}
-                            >
-                              Allow All
-                            </Button>
-                            <Button 
-                              variant={hasNone ? 'danger' : 'outline-secondary'} 
-                              size="sm"
-                              className="px-2"
-                              onClick={() => handleToggleAllForModule(p.moduleName, false)}
-                            >
-                              Deny All
-                            </Button>
-                          </div>
-                        </td>
+              {PAGE_PERMISSION_GROUPS.map(group => (
+                <div key={group.title} className="mb-4">
+                  <div className="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                    <div>
+                      <h6 className="fw-bold text-dark mb-0">{group.title}</h6>
+                      <small className="text-muted">{group.pages.length} page(s)</small>
+                    </div>
+                    <div className="btn-group btn-group-sm">
+                      <Button
+                        variant="outline-success"
+                        size="sm"
+                        onClick={() => handleToggleAllForGroup(group.title, true)}
+                      >
+                        Allow Section
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleToggleAllForGroup(group.title, false)}
+                      >
+                        Deny Section
+                      </Button>
+                    </div>
+                  </div>
+
+                  <Table responsive borderless className="align-middle mb-0">
+                    <thead>
+                      <tr className="border-bottom text-muted small">
+                        <th className="py-2.5" style={{ width: '32%' }}>Page</th>
+                        <th className="text-center">View</th>
+                        <th className="text-center">Create</th>
+                        <th className="text-center">Edit</th>
+                        <th className="text-center">Delete</th>
+                        <th className="text-end px-3">Page Access</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
+                    </thead>
+                    <tbody>
+                      {group.pages.map(page => {
+                        const p = permissionMap[page.key] || {
+                          moduleName: page.key,
+                          canView: false,
+                          canCreate: false,
+                          canEdit: false,
+                          canDelete: false,
+                        };
+                        const hasAll = p.canView && p.canCreate && p.canEdit && p.canDelete;
+                        const hasNone = !p.canView && !p.canCreate && !p.canEdit && !p.canDelete;
+                        const pageMeta = PAGE_BY_KEY[page.key] || page;
+
+                        return (
+                          <tr key={page.key} className="border-bottom hover-row">
+                            <td className="py-3">
+                              <span className="fw-bold text-dark d-block">{pageMeta.label}</span>
+                              <code className="text-muted small" style={{ fontSize: '0.75rem' }}>page: {page.key}</code>
+                            </td>
+                            <td className="text-center">
+                              <Form.Check
+                                type="checkbox"
+                                checked={p.canView}
+                                onChange={() => handlePermissionChange(page.key, 'canView')}
+                                inline
+                              />
+                            </td>
+                            <td className="text-center">
+                              <Form.Check
+                                type="checkbox"
+                                checked={p.canCreate}
+                                onChange={() => handlePermissionChange(page.key, 'canCreate')}
+                                inline
+                              />
+                            </td>
+                            <td className="text-center">
+                              <Form.Check
+                                type="checkbox"
+                                checked={p.canEdit}
+                                onChange={() => handlePermissionChange(page.key, 'canEdit')}
+                                inline
+                              />
+                            </td>
+                            <td className="text-center">
+                              <Form.Check
+                                type="checkbox"
+                                checked={p.canDelete}
+                                onChange={() => handlePermissionChange(page.key, 'canDelete')}
+                                inline
+                              />
+                            </td>
+                            <td className="text-end px-3">
+                              <div className="btn-group btn-group-sm">
+                                <Button
+                                  variant={hasAll ? 'success' : 'outline-secondary'}
+                                  size="sm"
+                                  className="px-2"
+                                  onClick={() => handleToggleAllForPage(page.key, true)}
+                                >
+                                  Allow All
+                                </Button>
+                                <Button
+                                  variant={hasNone ? 'danger' : 'outline-secondary'}
+                                  size="sm"
+                                  className="px-2"
+                                  onClick={() => handleToggleAllForPage(page.key, false)}
+                                >
+                                  Deny All
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </Table>
+                </div>
+              ))}
             </div>
           )}
         </Modal.Body>

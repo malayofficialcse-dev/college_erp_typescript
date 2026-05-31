@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, Table, Badge, Alert, Spinner, Row, Col, Button } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { fetchMyEmployee, asList } from '../../services/employeeSelfService';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -18,12 +19,11 @@ const MyPayslips = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const empRes = await api.get('/employees/search', { params: { keyword: user?.email, size: 1 } });
-      const emp = empRes.data.content?.[0];
+      const emp = await fetchMyEmployee(user);
       setEmployee(emp);
       if (emp) {
-        const res = await api.get('/payroll', { params: { employeeId: emp.id, size: 24 } });
-        setPayslips(res.data.content || res.data || []);
+        const res = await api.get('/payroll', { params: { employee: emp.id, size: 24 } });
+        setPayslips(asList(res.data));
       }
     } catch { setError('Failed to load payslip data.'); }
     finally { setLoading(false); }

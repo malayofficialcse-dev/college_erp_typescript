@@ -36,6 +36,7 @@ import libraryRoutes from "./routes/facilities/library.route.ts";
 import hostelRoutes from "./routes/facilities/hostel.route.ts";
 import transportRoutes from "./routes/facilities/transport.route.ts";
 import noticeRoutes from "./routes/Communication/notice.route.ts";
+import authRoutes from "./routes/Auth/auth.route.ts";
 
 import cors from "cors";
 
@@ -52,6 +53,8 @@ app.use(
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ success: true, message: "ERP API is running" });
 });
+
+app.use("/api/v1/auth", authRoutes);
 
 //core data module routes
 app.use("/api/v1/users", userRoutes);

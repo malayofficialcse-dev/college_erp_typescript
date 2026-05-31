@@ -2,8 +2,16 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, Table, Button, Modal, Form, Row, Col, Badge, Alert, Spinner } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { fetchMyEmployee, asList } from '../../services/employeeSelfService';
 
-const leaveTypes = ['CASUAL', 'MEDICAL', 'EARNED', 'MATERNITY', 'PATERNITY'];
+const leaveTypes = ['CASUAL', 'SICK', 'EARNED', 'MATERNITY', 'PATERNITY'];
+const leaveTypeLabels = {
+  CASUAL: 'Casual',
+  SICK: 'Medical',
+  EARNED: 'Earned',
+  MATERNITY: 'Maternity',
+  PATERNITY: 'Paternity',
+};
 const statusColor = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger', CANCELLED: 'secondary' };
 
 const MyLeaves = () => {
@@ -22,12 +30,11 @@ const MyLeaves = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const empRes = await api.get('/employees/search', { params: { keyword: user?.email, size: 1 } });
-      const emp = empRes.data.content?.[0];
+      const emp = await fetchMyEmployee(user);
       setEmployee(emp);
       if (emp) {
-        const leavesRes = await api.get(`/leaves/employee/${emp.id}`);
-        setLeaves(leavesRes.data.content || leavesRes.data || []);
+        const leavesRes = await api.get('/leaves', { params: { employee: emp.id } });
+        setLeaves(asList(leavesRes.data));
       }
     } catch (err) {
       setError('Failed to load leave data.');
@@ -43,12 +50,18 @@ const MyLeaves = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!employee?.id) {
+      setError('No employee profile linked to your account.');
+      return;
+    }
     try {
       setSubmitting(true);
       await api.post('/leaves', {
-        ...form, totalDays: calcDays(),
-        appliedDate: new Date().toISOString().split('T')[0],
-        employee: { id: employee.id }
+        leaveType: form.leaveType,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        reason: form.reason,
+        employee: employee.id,
       });
       setSuccess('Leave application submitted!');
       setShowModal(false);
@@ -60,7 +73,10 @@ const MyLeaves = () => {
 
   const handleCancel = async (id) => {
     if (!window.confirm('Cancel this leave request?')) return;
-    try { await api.patch(`/leaves/${id}/status?status=CANCELLED`); fetchData(); }
+    try {
+      await api.patch(`/leaves/${id}/status`, { status: 'CANCELLED' });
+      fetchData();
+    }
     catch { setError('Failed to cancel.'); }
   };
 
@@ -150,7 +166,7 @@ const MyLeaves = () => {
               <Col md={12}>
                 <Form.Label className="text-muted small fw-bold">Leave Type</Form.Label>
                 <Form.Select name="leaveType" value={form.leaveType} onChange={e => setForm(p => ({...p, leaveType: e.target.value}))} className="rounded-3">
-                  {leaveTypes.map(t => <option key={t}>{t}</option>)}
+                  {leaveTypes.map(t => <option key={t} value={t}>{leaveTypeLabels[t] || t}</option>)}
                 </Form.Select>
               </Col>
               <Col md={6}>

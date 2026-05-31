@@ -150,7 +150,14 @@ const Employees = () => {
       if (isEdit) {
         await api.put(`/employees/${currentEmployee.id || currentEmployee._id}`, payload);
       } else {
-        await api.post('/employees', payload);
+        const response = await api.post('/employees', payload);
+        const loginHint = response.data?.loginHint;
+        const tempPassword = response.data?.tempPassword;
+        if (loginHint || tempPassword) {
+          window.alert(
+            `Employee created successfully.\n\nLogin details:\nEmployee Code: ${loginHint?.username || response.data?.userAccount?.username || 'N/A'}\nEmail: ${loginHint?.email || response.data?.userAccount?.email || 'N/A'}\nPassword: ${tempPassword || loginHint?.password || 'Use employee code'}`
+          );
+        }
       }
       setShowModal(false);
       fetchEmployees(currentPage, true);

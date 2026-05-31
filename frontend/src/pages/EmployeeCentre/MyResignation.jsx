@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, Table, Button, Modal, Form, Row, Col, Badge, Alert, Spinner } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { fetchMyEmployee, asList } from '../../services/employeeSelfService';
 
 const statusColor = { PENDING: 'warning', ACCEPTED: 'success', REJECTED: 'danger', WITHDRAWN: 'secondary' };
 
@@ -21,12 +22,11 @@ const MyResignation = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const empRes = await api.get('/employees/search', { params: { keyword: user?.email, size: 1 } });
-      const emp = empRes.data.content?.[0];
+      const emp = await fetchMyEmployee(user);
       setEmployee(emp);
       if (emp) {
-        const res = await api.get(`/resignations/employee/${emp.id}`);
-        setResignations(res.data.content || res.data || []);
+        const res = await api.get('/resignations', { params: { employee: emp.id } });
+        setResignations(asList(res.data));
       }
     } catch { setError('Failed to load resignation data.'); }
     finally { setLoading(false); }
@@ -36,9 +36,17 @@ const MyResignation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!employee?.id) {
+      setError('No employee profile linked to your account.');
+      return;
+    }
     try {
       setSubmitting(true);
-      await api.post('/resignations', { ...form, employee: { id: employee.id } });
+      await api.post('/resignations', {
+        lastWorkingDate: form.lastWorkingDate,
+        reason: form.reason,
+        employee: employee.id,
+      });
       setSuccess('Resignation submitted. HR will review your request.');
       setShowModal(false);
       setForm({ lastWorkingDate: '', reason: '' });
@@ -50,7 +58,7 @@ const MyResignation = () => {
   const handleWithdraw = async (id) => {
     if (!window.confirm('Are you sure you want to withdraw this resignation?')) return;
     try {
-      await api.patch(`/resignations/${id}/withdraw`);
+      await api.patch(`/resignations/${id}/status`, { status: 'WITHDRAWN' });
       setSuccess('Resignation withdrawn successfully.');
       fetchData();
     } catch { setError('Failed to withdraw resignation.'); }

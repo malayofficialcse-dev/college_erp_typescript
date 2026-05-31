@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, Badge, Button, Alert, Spinner, Row, Col, Modal, Form } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
+import { fetchMyEmployee, asList } from '../../services/employeeSelfService';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -34,16 +35,30 @@ const MyAttendance = () => {
 
   useEffect(() => { fetchData(); }, [viewYear]);
 
+  const normalizeAttendanceRecord = (record) => {
+    const dateValue = record.attendanceDate || record.date;
+    const dateStr = typeof dateValue === 'string'
+      ? dateValue.split('T')[0]
+      : dateValue instanceof Date
+        ? dateValue.toISOString().split('T')[0]
+        : dateValue;
+
+    return {
+      ...record,
+      attendanceDate: dateStr,
+      checkIn: record.checkIn || null,
+      checkOut: record.checkOut || null,
+    };
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const empRes = await api.get('/employees/search', { params: { keyword: user?.email, size: 1 } });
-      const emp = empRes.data.content?.[0];
+      const emp = await fetchMyEmployee(user);
       setEmployee(emp);
       if (emp) {
-        // Fetch large limit (1000) to get full year's data for yearly grid & charts
-        const res = await api.get(`/hr/attendance/employee/${emp.id}`, { params: { size: 1000 } });
-        setAttendance(res.data.content || res.data || []);
+        const res = await api.get('/hr/attendance', { params: { employee: emp.id, size: 1000 } });
+        setAttendance(asList(res.data).map(normalizeAttendanceRecord));
       }
     } catch { setError('Failed to load attendance records.'); }
     finally { setLoading(false); }
@@ -63,9 +78,19 @@ const MyAttendance = () => {
 
   const handleMarkAttendance = async (e) => {
     e.preventDefault();
+    if (!employee?.id) {
+      setError('No employee profile linked to your account.');
+      return;
+    }
     try {
       setSubmitting(true);
-      await api.post('/hr/attendance', { ...form, employee: { id: employee.id } });
+      const status = form.status === 'ON_LEAVE' ? 'ABSENT' : form.status;
+      await api.post('/hr/attendance', {
+        date: form.attendanceDate,
+        status,
+        remarks: form.remarks,
+        employee: employee.id,
+      });
       setSuccess('Attendance recorded successfully!');
       setShowModal(false);
       fetchData();

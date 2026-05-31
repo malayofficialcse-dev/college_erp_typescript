@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Navbar, Container, Nav, Dropdown, Form, Collapse } from 'react-bootstrap';
 import { AuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { getPageKeyFromPath, PAGE_BY_KEY } from '../config/pagePermissions';
 import './Layout.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -16,49 +17,11 @@ const Layout = () => {
 
   const [openMenus, setOpenMenus] = useState({});
 
-  const getModuleForPath = (path) => {
-    if (path.startsWith('/core/')) return 'departments';
-    if (path.startsWith('/students')) return 'students';
-    if (path.startsWith('/employees')) return 'employees';
-    if (path.startsWith('/staff-attendance')) return 'employees';
-    if (path.startsWith('/leaves')) return 'employees';
-    if (path.startsWith('/leave-approvals')) return 'employees';
-    if (path.startsWith('/departments')) return 'departments';
-    if (path.startsWith('/classrooms')) return 'departments';
-    if (path.startsWith('/sections')) return 'departments';
-    if (path.startsWith('/sessions')) return 'departments';
-    if (path.startsWith('/subject-assignments')) return 'departments';
-    if (path.startsWith('/payroll')) return 'payroll';
-    
-    if (path.startsWith('/counseling')) return 'academics';
-    if (path.startsWith('/academic-years')) return 'academics';
-    if (path.startsWith('/semesters')) return 'academics';
-    if (path.startsWith('/teachers')) return 'academics';
-    if (path.startsWith('/courses')) return 'academics';
-    if (path.startsWith('/subjects')) return 'academics';
-    if (path.startsWith('/timetable')) return 'academics';
-    if (path.startsWith('/attendance')) return 'academics';
-    if (path.startsWith('/exam-schedules')) return 'academics';
-    if (path.startsWith('/exam-results')) return 'academics';
-    if (path.startsWith('/admissions')) return 'academics';
-    
-    if (path.startsWith('/library')) return 'library';
-    if (path.startsWith('/book-reservations')) return 'library';
-    
-    if (path.startsWith('/hostel')) return 'hostel';
-    if (path.startsWith('/transport')) return 'transport';
-    
-    if (path.startsWith('/fees')) return 'finance';
-    if (path.startsWith('/fee-invoices')) return 'finance';
-    if (path.startsWith('/scholarships')) return 'finance';
-    
-    if (path.startsWith('/notices')) return 'notices';
-    if (path.startsWith('/events')) return 'notices';
-    if (path.startsWith('/event-registrations')) return 'notices';
-    if (path.startsWith('/notifications')) return 'notices';
-    
-    if (path.startsWith('/reports')) return 'finance';
-    return null;
+  const canViewPage = (path) => {
+    const pageKey = getPageKeyFromPath(path);
+    if (!pageKey) return true;
+    if (PAGE_BY_KEY[pageKey]?.alwaysVisible) return true;
+    return hasPermission(pageKey, 'view');
   };
 
   const navCategories = [
@@ -189,11 +152,7 @@ const Layout = () => {
   ];
 
   const filteredNavCategories = navCategories.map(category => {
-    const filteredItems = category.items.filter(item => {
-      const module = getModuleForPath(item.path);
-      if (!module) return true;
-      return hasPermission(module, 'view');
-    });
+    const filteredItems = category.items.filter(item => canViewPage(item.path));
     return { ...category, items: filteredItems };
   }).filter(category => category.items.length > 0);
 

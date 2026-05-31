@@ -34,10 +34,10 @@ const Login = () => {
               {error && <Alert variant="danger">{error}</Alert>}
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Username</Form.Label>
+                  <Form.Label>Employee Code or Email</Form.Label>
                   <Form.Control 
                     type="text" 
-                    placeholder="Enter username" 
+                    placeholder="EMP26053000001 or name@college.edu.in" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required 

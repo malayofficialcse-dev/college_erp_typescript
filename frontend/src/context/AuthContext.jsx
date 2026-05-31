@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { getPageKeyFromPath, PAGE_BY_KEY } from '../config/pagePermissions';
 
 export const AuthContext = createContext();
 
@@ -73,15 +74,34 @@ export const AuthProvider = ({ children }) => {
     navigate('/login');
   };
 
-  const hasPermission = (moduleName, action) => {
-    // Temporarily bypass all frontend permission checks so you can see all pages and explore
-    return true;
+  const hasPermission = (pageKey, action) => {
+    if (!user) return false;
+    if (user.roles?.includes('ROLE_ADMIN')) return true;
+
+    const permission = permissions.find((item) => item.moduleName === pageKey);
+    if (!permission) return false;
+
+    const actionMap = {
+      view: 'canView',
+      create: 'canCreate',
+      edit: 'canEdit',
+      delete: 'canDelete',
+    };
+
+    return !!permission[actionMap[action]];
+  };
+
+  const hasPageAccess = (path, action = 'view') => {
+    const pageKey = getPageKeyFromPath(path);
+    if (!pageKey) return true;
+    if (PAGE_BY_KEY[pageKey]?.alwaysVisible) return true;
+    return hasPermission(pageKey, action);
   };
 
   if (loading) return null;
 
   return (
-    <AuthContext.Provider value={{ user, permissions, login, logout, hasPermission, fetchPermissions }}>
+    <AuthContext.Provider value={{ user, permissions, login, logout, hasPermission, hasPageAccess, fetchPermissions }}>
       {children}
     </AuthContext.Provider>
   );
