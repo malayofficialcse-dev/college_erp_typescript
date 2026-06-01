@@ -378,6 +378,7 @@ const AdmissionEmiSchedule = () => {
                   <th>Fine</th>
                   <th>Paid Amount</th>
                   <th>Paid Date</th>
+                  <th>Receipt No.</th>
                   <th>Method</th>
                   <th>Txn ID / Cheque #</th>
                   <th>Status</th>
@@ -397,6 +398,7 @@ const AdmissionEmiSchedule = () => {
                     <td className="text-danger">{emi.fineAmount > 0 ? `₹${emi.fineAmount}` : '—'}</td>
                     <td className="text-success fw-semibold">{emi.paidAmount ? `₹${Number(emi.paidAmount).toLocaleString()}` : '—'}</td>
                     <td>{emi.paidDate ? toDateInput(emi.paidDate) : '—'}</td>
+                    <td><code>{emi.receiptNumber || '—'}</code></td>
                     <td>
                       {emi.paymentMethod ? (
                         <span className="d-flex align-items-center gap-1">
@@ -441,7 +443,7 @@ const AdmissionEmiSchedule = () => {
                 );})}
                 {emis.length === 0 && (
                   <tr>
-                    <td colSpan="12" className="text-center py-5 text-muted">
+                    <td colSpan="13" className="text-center py-5 text-muted">
                       No installment rows found. Use Generate Schedule to create them.
                     </td>
                   </tr>

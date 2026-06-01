@@ -26,6 +26,7 @@ const Admissions = () => (
     ]}
     columns={[
       { key: 'enrollmentNumber', label: 'Enrollment No.', className: 'px-4 fw-bold text-primary' },
+      { key: 'billNumber', label: 'Bill No.', render: (item) => item.billNumber || 'N/A' },
       { key: 'firstName', label: 'First Name' },
       { key: 'lastName', label: 'Last Name' },
       { key: 'email', label: 'Email' },
