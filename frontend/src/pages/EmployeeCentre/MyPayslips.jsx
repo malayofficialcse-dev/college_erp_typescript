@@ -555,26 +555,46 @@ const renderDeductionRow = (label, value) => (
       return;
     }
 
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=900');
-    if (!printWindow) {
-      setError('Popup blocked. Please allow popups to download the payslip.');
+    const html = buildPayslipPdfMarkup(selectedPayslip);
+    if (!html) {
+      setError('Unable to build the payslip preview.');
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(buildPayslipPdfMarkup(selectedPayslip));
-    printWindow.document.close();
-    printWindow.focus();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.setAttribute('aria-hidden', 'true');
 
-    const triggerPrint = () => {
-      printWindow.print();
+    iframe.onload = () => {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) {
+        document.body.removeChild(iframe);
+        setError('Unable to open the print preview.');
+        return;
+      }
+
+      const cleanup = () => {
+        window.removeEventListener('afterprint', cleanup);
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 300);
+      };
+
+      window.addEventListener('afterprint', cleanup, { once: true });
+      frameWindow.focus();
+      setTimeout(() => frameWindow.print(), 250);
     };
 
-    if (printWindow.document.readyState === 'complete') {
-      triggerPrint();
-    } else {
-      printWindow.onload = triggerPrint;
-    }
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
   };
 
   return (
