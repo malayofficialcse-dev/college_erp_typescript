@@ -21,6 +21,11 @@ const MONTHS = [
 
 const CURRENT_MONTH = new Date().getMonth() + 1;
 const CURRENT_YEAR = new Date().getFullYear();
+const COMPANY_NAME = 'ERP Pro';
+const COMPANY_TAGLINE = 'Institutional Resource Planning Suite';
+const COMPANY_ADDRESS = 'Campus Administration Office, Main Building';
+const COMPANY_PHONE = '+91 00000 00000';
+const COMPANY_EMAIL = 'accounts@erppro.edu.in';
 
 const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -229,12 +234,348 @@ const MyPayslips = () => {
     </div>
   );
 
-  const renderDeductionRow = (label, value) => (
+const renderDeductionRow = (label, value) => (
     <div key={label} className="d-flex justify-content-between py-2 border-bottom">
       <span className="small text-muted">{label}</span>
       <span className="small fw-semibold text-danger">{formatMoney(value)}</span>
     </div>
   );
+
+  const escapeHtml = (value) =>
+    String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+  const buildSlipRows = (title, rows, accent) => `
+    <div style="border:1px solid #e5e7eb;border-radius:16px;padding:18px;margin-bottom:14px;background:${accent.background};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="margin:0;font-size:16px;font-weight:800;color:${accent.heading};">${title}</h3>
+        <div style="background:${accent.badgeBg};color:#fff;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:800;">
+          ${escapeHtml(accent.badgeText)}
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #edf2f7;color:#64748b;">${escapeHtml(row.label)}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #edf2f7;text-align:right;font-weight:700;color:${row.color || '#0f172a'};">${escapeHtml(row.value)}</td>
+                </tr>
+              `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const buildPayslipPdfMarkup = (payslip) => {
+    if (!employee || !payslip) return '';
+
+    const totalGross = payslip.grossSalary ?? Number(payslip.basicSalary ?? 0) + selectedAllowances;
+    const totalDeductions = selectedDeductions;
+    const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+    const departmentName = employee.department?.name || employee.department?.code || '—';
+    const paidDate = payslip.paidDate ? new Date(payslip.paidDate).toLocaleDateString('en-IN') : '—';
+    const transactionId = payslip.transactionId || '—';
+
+    const earningsRows = [
+      { label: 'Basic Salary', value: formatMoney(payslip.basicSalary) },
+      { label: 'HRA', value: formatMoney(payslip.hra) },
+      { label: 'DA', value: formatMoney(payslip.da) },
+      { label: 'TA', value: formatMoney(payslip.ta) },
+      { label: 'Other Allowances', value: formatMoney(payslip.otherAllowances) },
+      { label: 'Bonus', value: formatMoney(payslip.bonus) },
+      { label: 'Gross Salary', value: formatMoney(totalGross), color: '#059669' },
+    ];
+
+    const deductionRows = [
+      { label: 'PF (Provident Fund)', value: formatMoney(payslip.pfDeduction), color: '#dc2626' },
+      { label: 'Tax (TDS)', value: formatMoney(payslip.taxDeduction), color: '#dc2626' },
+      { label: 'ESI', value: formatMoney(payslip.esiDeduction), color: '#dc2626' },
+      { label: 'Other Deductions', value: formatMoney(payslip.otherDeductions), color: '#dc2626' },
+      { label: 'Total Deductions', value: formatMoney(totalDeductions), color: '#dc2626' },
+    ];
+
+    return `
+      <html>
+        <head>
+          <title>Payslip ${escapeHtml(formatMonthYear(payslip))}</title>
+          <style>
+            @page { size: A4; margin: 16mm; }
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              background: #f3f4f6;
+              color: #0f172a;
+            }
+            .sheet {
+              background: #fff;
+              padding: 24px;
+              border-radius: 20px;
+              border: 1px solid #e5e7eb;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 24px;
+              border-bottom: 2px solid #dbeafe;
+              padding-bottom: 18px;
+              margin-bottom: 20px;
+            }
+            .brand {
+              display: flex;
+              gap: 14px;
+              align-items: center;
+            }
+            .logo {
+              width: 62px;
+              height: 62px;
+              border-radius: 16px;
+              background: linear-gradient(135deg, #4318ff 0%, #6d28d9 100%);
+              color: #fff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 22px;
+              font-weight: 900;
+            }
+            .company {
+              line-height: 1.4;
+            }
+            .company h1 {
+              margin: 0;
+              font-size: 22px;
+              color: #111827;
+            }
+            .company p {
+              margin: 2px 0;
+              color: #475569;
+              font-size: 12px;
+            }
+            .meta {
+              text-align: right;
+            }
+            .meta h2 {
+              margin: 0;
+              font-size: 24px;
+              color: #111827;
+            }
+            .meta .sub {
+              margin-top: 6px;
+              font-size: 12px;
+              color: #64748b;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 12px;
+              margin-bottom: 18px;
+            }
+            .info-card {
+              border: 1px solid #e5e7eb;
+              border-radius: 16px;
+              padding: 14px;
+              background: #f8fafc;
+            }
+            .info-card .label {
+              color: #64748b;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: .05em;
+              margin-bottom: 4px;
+            }
+            .info-card .value {
+              font-size: 15px;
+              font-weight: 700;
+              color: #111827;
+            }
+            .stamp-area {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              gap: 24px;
+              margin-top: 20px;
+              padding-top: 18px;
+              border-top: 1px solid #e5e7eb;
+            }
+            .signature-block {
+              min-width: 260px;
+              text-align: center;
+            }
+            .signature-line {
+              margin-top: 40px;
+              border-top: 1px solid #94a3b8;
+              padding-top: 8px;
+              font-size: 12px;
+              color: #475569;
+            }
+            .stamp {
+              width: 140px;
+              height: 140px;
+              border: 4px solid #2563eb;
+              border-radius: 50%;
+              color: #2563eb;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              font-weight: 800;
+              transform: rotate(-12deg);
+              opacity: .9;
+            }
+            .stamp span {
+              font-size: 12px;
+              line-height: 1.3;
+            }
+            .footer-note {
+              margin-top: 16px;
+              text-align: center;
+              font-size: 11px;
+              color: #64748b;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="sheet">
+            <div class="header">
+              <div class="brand">
+                <div class="logo">EP</div>
+                <div class="company">
+                  <h1>${escapeHtml(COMPANY_NAME)}</h1>
+                  <p>${escapeHtml(COMPANY_TAGLINE)}</p>
+                  <p>${escapeHtml(COMPANY_ADDRESS)}</p>
+                  <p>${escapeHtml(COMPANY_PHONE)} · ${escapeHtml(COMPANY_EMAIL)}</p>
+                </div>
+              </div>
+              <div class="meta">
+                <h2>Payslip</h2>
+                <div class="sub">${escapeHtml(formatMonthYear(payslip))}</div>
+                <div class="sub">Payslip No: ${escapeHtml(payslip.id || '—')}</div>
+                <div class="sub">Status: ${escapeHtml(payslip.status || 'UNPAID')}</div>
+              </div>
+            </div>
+
+            <div class="info-grid">
+              <div class="info-card">
+                <div class="label">Employee Name</div>
+                <div class="value">${escapeHtml(employeeName || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Employee Code</div>
+                <div class="value">${escapeHtml(employee.employeeCode || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Designation</div>
+                <div class="value">${escapeHtml(employee.designation || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Department</div>
+                <div class="value">${escapeHtml(departmentName)}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Paid Date</div>
+                <div class="value">${escapeHtml(paidDate)}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Transaction ID</div>
+                <div class="value">${escapeHtml(transactionId)}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Net Pay</div>
+                <div class="value">${escapeHtml(formatMoney(payslip.netSalary))}</div>
+              </div>
+              <div class="info-card">
+                <div class="label">Base Salary</div>
+                <div class="value">${escapeHtml(formatMoney(payslip.basicSalary))}</div>
+              </div>
+            </div>
+
+            ${buildSlipRows('Earnings', earningsRows, {
+              background: '#f8fafc',
+              heading: '#059669',
+              badgeBg: '#059669',
+              badgeText: formatMoney(totalGross),
+            })}
+
+            ${buildSlipRows('Deductions', deductionRows, {
+              background: '#fff5f5',
+              heading: '#dc2626',
+              badgeBg: '#dc2626',
+              badgeText: formatMoney(totalDeductions),
+            })}
+
+            <div style="padding:18px;border-radius:16px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;text-align:center;">
+              <div style="font-size:12px;opacity:.8;margin-bottom:6px;">Net Take-Home Pay</div>
+              <div style="font-size:30px;font-weight:900;">${escapeHtml(formatMoney(payslip.netSalary))}</div>
+              <div style="font-size:12px;opacity:.9;margin-top:4px;">${escapeHtml(
+                payslip.status === 'PAID'
+                  ? 'Paid and acknowledged'
+                  : 'Prepared for review or payment'
+              )}</div>
+            </div>
+
+            <div class="stamp-area">
+              <div>
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px;">Remarks</div>
+                <div style="font-size:13px;color:#111827;max-width:360px;">
+                  This payslip is system generated and valid without physical signature when printed from ERP Pro.
+                </div>
+              </div>
+              <div class="signature-block">
+                <div class="stamp">
+                  <span>${escapeHtml(COMPANY_NAME)}</span>
+                  <span>Official</span>
+                  <span>Stamp</span>
+                </div>
+                <div class="signature-line">Authorized Signatory</div>
+              </div>
+            </div>
+
+            <div class="footer-note">
+              This document is a computer-generated payslip and does not require a manual signature.
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const openPayslipPdf = () => {
+    if (!selectedPayslip) {
+      setError('Please select a payslip first.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1100,height=900');
+    if (!printWindow) {
+      setError('Popup blocked. Please allow popups to download the payslip.');
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(buildPayslipPdfMarkup(selectedPayslip));
+    printWindow.document.close();
+    printWindow.focus();
+
+    const triggerPrint = () => {
+      printWindow.print();
+    };
+
+    if (printWindow.document.readyState === 'complete') {
+      triggerPrint();
+    } else {
+      printWindow.onload = triggerPrint;
+    }
+  };
 
   return (
     <div className="container-fluid">
@@ -498,9 +839,9 @@ const MyPayslips = () => {
                             size="sm"
                             variant="outline-secondary"
                             className="rounded-pill"
-                            onClick={() => window.print()}
+                            onClick={openPayslipPdf}
                           >
-                            <i className="bi bi-printer me-1"></i>Print
+                            <i className="bi bi-download me-1"></i>Download PDF
                           </Button>
                         </div>
                       </div>

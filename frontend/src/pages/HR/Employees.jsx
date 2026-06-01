@@ -122,7 +122,9 @@ const Employees = () => {
     setCurrentEmployee({
       employeeCode: '', firstName: '', lastName: '', email: '', phone: '',
       designation: '', employeeType: 'TEACHING', dateOfBirth: '', joiningDate: '',
-      basicSalary: '', address: '', status: 'ACTIVE', departmentId: ''
+      basicSalary: '', hra: 0, da: 0, ta: 0, bonus: 0, otherAllowances: 0,
+      pfDeduction: 0, taxDeduction: 0, esiDeduction: 0, otherDeductions: 0,
+      address: '', status: 'ACTIVE', departmentId: ''
     });
     setShowModal(true);
   };
@@ -140,6 +142,16 @@ const Employees = () => {
       const payload = {
         ...currentEmployee,
         department: currentEmployee.departmentId || undefined,
+        basicSalary: currentEmployee.basicSalary === '' ? undefined : Number(currentEmployee.basicSalary || 0),
+        hra: Number(currentEmployee.hra || 0),
+        da: Number(currentEmployee.da || 0),
+        ta: Number(currentEmployee.ta || 0),
+        bonus: Number(currentEmployee.bonus || 0),
+        otherAllowances: Number(currentEmployee.otherAllowances || 0),
+        pfDeduction: Number(currentEmployee.pfDeduction || 0),
+        taxDeduction: Number(currentEmployee.taxDeduction || 0),
+        esiDeduction: Number(currentEmployee.esiDeduction || 0),
+        otherDeductions: Number(currentEmployee.otherDeductions || 0),
       };
       delete payload.departmentId;
       if (!isEdit) {
@@ -413,6 +425,80 @@ const Employees = () => {
                     <option value="RETIRED">Retired</option>
                   </Form.Select>
                 </Form.Group>
+              </Col>
+              <Col xs={12}>
+                <div className="border rounded-4 p-3 bg-light">
+                  <div className="fw-bold text-dark mb-3">Salary Structure</div>
+                  <Row className="g-3">
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">Basic Salary</Form.Label>
+                        <Form.Control
+                          className="rounded-3"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={currentEmployee.basicSalary}
+                          onChange={e => setCurrentEmployee({...currentEmployee, basicSalary: e.target.value})}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">HRA</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.hra || 0} onChange={e => setCurrentEmployee({...currentEmployee, hra: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">DA</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.da || 0} onChange={e => setCurrentEmployee({...currentEmployee, da: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">TA</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.ta || 0} onChange={e => setCurrentEmployee({...currentEmployee, ta: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">Bonus</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.bonus || 0} onChange={e => setCurrentEmployee({...currentEmployee, bonus: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">Other Allowances</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.otherAllowances || 0} onChange={e => setCurrentEmployee({...currentEmployee, otherAllowances: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">PF Deduction</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.pfDeduction || 0} onChange={e => setCurrentEmployee({...currentEmployee, pfDeduction: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">Tax Deduction</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.taxDeduction || 0} onChange={e => setCurrentEmployee({...currentEmployee, taxDeduction: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">ESI Deduction</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.esiDeduction || 0} onChange={e => setCurrentEmployee({...currentEmployee, esiDeduction: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label className="text-muted small fw-bold">Other Deductions</Form.Label>
+                        <Form.Control className="rounded-3" type="number" min="0" step="0.01" value={currentEmployee.otherDeductions || 0} onChange={e => setCurrentEmployee({...currentEmployee, otherDeductions: e.target.value})} />
+                      </Form.Group>
+                    </Col>
+                  </Row>
+                </div>
               </Col>
             </Row>
           </Modal.Body>

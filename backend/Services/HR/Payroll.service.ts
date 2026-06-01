@@ -45,21 +45,46 @@ const resolveEmployeeId = (
   return employeeId ? String(employeeId) : "";
 };
 
-const buildPayrollBreakdown = (basicSalary: number) => {
-  const normalizedBasicSalary = roundMoney(Number(basicSalary));
-  const hra = roundMoney(normalizedBasicSalary * 0.2);
-  const da = roundMoney(normalizedBasicSalary * 0.12);
-  const ta = roundMoney(normalizedBasicSalary * 0.05);
-  const otherAllowances = roundMoney(normalizedBasicSalary * 0.03);
-  const bonus = 0;
+const resolveStructuredAmount = (
+  amount: number | undefined | null,
+  fallback: number
+) => roundMoney(Number(amount ?? fallback));
+
+const buildPayrollBreakdown = (employee: {
+  basicSalary?: number | null;
+  hra?: number | null;
+  da?: number | null;
+  ta?: number | null;
+  bonus?: number | null;
+  otherAllowances?: number | null;
+  pfDeduction?: number | null;
+  taxDeduction?: number | null;
+  esiDeduction?: number | null;
+  otherDeductions?: number | null;
+}) => {
+  const normalizedBasicSalary = roundMoney(Number(employee.basicSalary ?? 0));
+  const hra = resolveStructuredAmount(employee.hra, normalizedBasicSalary * 0.2);
+  const da = resolveStructuredAmount(employee.da, normalizedBasicSalary * 0.12);
+  const ta = resolveStructuredAmount(employee.ta, normalizedBasicSalary * 0.05);
+  const otherAllowances = resolveStructuredAmount(
+    employee.otherAllowances,
+    normalizedBasicSalary * 0.03
+  );
+  const bonus = resolveStructuredAmount(employee.bonus, 0);
   const grossSalary = roundMoney(
     normalizedBasicSalary + hra + da + ta + otherAllowances + bonus
   );
 
-  const pfDeduction = roundMoney(normalizedBasicSalary * 0.12);
-  const taxDeduction = roundMoney(grossSalary * 0.05);
-  const esiDeduction = grossSalary <= 21000 ? roundMoney(grossSalary * 0.0075) : 0;
-  const otherDeductions = 0;
+  const pfDeduction = resolveStructuredAmount(
+    employee.pfDeduction,
+    normalizedBasicSalary * 0.12
+  );
+  const taxDeduction = resolveStructuredAmount(employee.taxDeduction, grossSalary * 0.05);
+  const esiDeduction = resolveStructuredAmount(
+    employee.esiDeduction,
+    grossSalary <= 21000 ? grossSalary * 0.0075 : 0
+  );
+  const otherDeductions = resolveStructuredAmount(employee.otherDeductions, 0);
   const allowances = sumMoney(hra, da, ta, otherAllowances, bonus);
   const deductions = sumMoney(pfDeduction, taxDeduction, esiDeduction, otherDeductions);
   const netSalary = roundMoney(Math.max(grossSalary - deductions, 0));
@@ -145,7 +170,9 @@ export const createPayrollService = async (data: ICreatePayrollInput) => {
 export const generatePayrollForEmployeeService = async (
   input: IGeneratePayrollInput
 ) => {
-  const employee = await Employee.findById(input.employee);
+  const employee = await Employee.findById(input.employee).select(
+    "firstName lastName employeeCode designation basicSalary hra da ta bonus otherAllowances pfDeduction taxDeduction esiDeduction otherDeductions department"
+  );
   if (!employee) {
     throw new Error("Employee not found");
   }
@@ -165,7 +192,7 @@ export const generatePayrollForEmployeeService = async (
     return { payroll: existing, created: false };
   }
 
-  const breakdown = buildPayrollBreakdown(baseSalary);
+  const breakdown = buildPayrollBreakdown(employee);
   const payroll = await createPayrollService({
     employee: String(employee._id),
     month: input.month,

@@ -59,16 +59,16 @@ export const ensureUserAccountForEmployee = async (
   const email = employee.email.toLowerCase().trim();
   const username = employee.employeeCode.toUpperCase().trim();
 
-  let userAccount = await UserAccount.findOne({ employee: employee._id });
+  const userAccount = await UserAccount.findOne({ employee: employee._id });
 
-  if (!userAccount) {
-    userAccount = await UserAccount.findOne({
+  const existingAccount =
+    userAccount ||
+    (await UserAccount.findOne({
       $or: [{ email }, { username }],
-    });
-  }
+    }));
 
-  if (userAccount) {
-    await userAccountService.updateUserAccount(String(userAccount._id), {
+  if (existingAccount) {
+    await userAccountService.updateUserAccount(String(existingAccount._id), {
       username,
       email,
       fullName,
@@ -78,16 +78,16 @@ export const ensureUserAccountForEmployee = async (
       ...(password ? { password } : {}),
     });
 
-    await seedDefaultPermissions(String(userAccount._id), roles);
+    await seedDefaultPermissions(String(existingAccount._id), roles);
 
     return {
-      userAccount: await UserAccount.findById(userAccount._id).select("-password"),
+      userAccount: await UserAccount.findById(existingAccount._id).select("-password"),
       tempPassword: password ?? null,
       created: false,
     };
   }
 
-  userAccount = await userAccountService.createUserAccount({
+  const createdAccount = await userAccountService.createUserAccount({
     username,
     email,
     password: initialPassword,
@@ -97,10 +97,10 @@ export const ensureUserAccountForEmployee = async (
     employee: employee._id,
   });
 
-  await seedDefaultPermissions(String(userAccount._id), roles);
+  await seedDefaultPermissions(String(createdAccount._id), roles);
 
   return {
-    userAccount,
+    userAccount: createdAccount,
     tempPassword: initialPassword,
     created: true,
   };
