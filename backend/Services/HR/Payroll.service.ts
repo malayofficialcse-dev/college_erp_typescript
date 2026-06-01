@@ -1,20 +1,114 @@
+import Employee from "../../Models/HR/Employee.ts";
 import Payroll from "../../Models/HR/Payroll.ts";
 import type { PayrollStatus } from "../../Interfaces/HR/index.ts";
 
 export interface ICreatePayrollInput {
-  employee: string;
+  employee: string | { id?: string | number; _id?: string | number };
   month: number;
   year: number;
   basicSalary: number;
+  grossSalary?: number;
+  hra?: number;
+  da?: number;
+  ta?: number;
+  bonus?: number;
+  otherAllowances?: number;
   allowances?: number;
+  pfDeduction?: number;
+  taxDeduction?: number;
+  esiDeduction?: number;
+  otherDeductions?: number;
   deductions?: number;
   netSalary: number;
   transactionId?: string;
 }
 
+export interface IGeneratePayrollInput {
+  employee: string;
+  month: number;
+  year: number;
+}
+
+const roundMoney = (value: number) => Number(value.toFixed(2));
+
+const sumMoney = (...values: Array<number | undefined | null>) =>
+  roundMoney(values.reduce((total, value) => total + Number(value ?? 0), 0));
+
+const resolveEmployeeId = (
+  employee: string | { id?: string | number; _id?: string | number }
+) => {
+  if (typeof employee === "string") {
+    return employee;
+  }
+
+  const employeeId = employee.id ?? employee._id;
+  return employeeId ? String(employeeId) : "";
+};
+
+const buildPayrollBreakdown = (basicSalary: number) => {
+  const normalizedBasicSalary = roundMoney(Number(basicSalary));
+  const hra = roundMoney(normalizedBasicSalary * 0.2);
+  const da = roundMoney(normalizedBasicSalary * 0.12);
+  const ta = roundMoney(normalizedBasicSalary * 0.05);
+  const otherAllowances = roundMoney(normalizedBasicSalary * 0.03);
+  const bonus = 0;
+  const grossSalary = roundMoney(
+    normalizedBasicSalary + hra + da + ta + otherAllowances + bonus
+  );
+
+  const pfDeduction = roundMoney(normalizedBasicSalary * 0.12);
+  const taxDeduction = roundMoney(grossSalary * 0.05);
+  const esiDeduction = grossSalary <= 21000 ? roundMoney(grossSalary * 0.0075) : 0;
+  const otherDeductions = 0;
+  const allowances = sumMoney(hra, da, ta, otherAllowances, bonus);
+  const deductions = sumMoney(pfDeduction, taxDeduction, esiDeduction, otherDeductions);
+  const netSalary = roundMoney(Math.max(grossSalary - deductions, 0));
+
+  return {
+    basicSalary: normalizedBasicSalary,
+    grossSalary,
+    hra,
+    da,
+    ta,
+    bonus,
+    otherAllowances,
+    allowances,
+    pfDeduction,
+    taxDeduction,
+    esiDeduction,
+    otherDeductions,
+    deductions,
+    netSalary,
+  };
+};
+
 export const createPayrollService = async (data: ICreatePayrollInput) => {
+  const employeeId = resolveEmployeeId(data.employee);
+  if (!employeeId) {
+    throw new Error("Employee is required");
+  }
+
+  const basicSalary = roundMoney(Number(data.basicSalary ?? 0));
+  const allowances =
+    data.allowances !== undefined
+      ? roundMoney(Number(data.allowances))
+      : sumMoney(data.hra, data.da, data.ta, data.bonus, data.otherAllowances);
+  const deductions =
+    data.deductions !== undefined
+      ? roundMoney(Number(data.deductions))
+      : sumMoney(
+          data.pfDeduction,
+          data.taxDeduction,
+          data.esiDeduction,
+          data.otherDeductions
+        );
+  const grossSalary = roundMoney(
+    Number(data.grossSalary ?? basicSalary + allowances)
+  );
+  const netSalary = roundMoney(Number(data.netSalary ?? grossSalary - deductions));
+
   const existing = await Payroll.findOne({
-    employee: data.employee,
+    employee: employeeId,
     month: data.month,
     year: data.year,
   });
@@ -23,7 +117,71 @@ export const createPayrollService = async (data: ICreatePayrollInput) => {
       "Payroll record for this employee for the given month/year already exists"
     );
   }
-  return Payroll.create(data);
+
+  const payroll = await Payroll.create({
+    employee: employeeId,
+    month: data.month,
+    year: data.year,
+    basicSalary,
+    grossSalary,
+    hra: roundMoney(Number(data.hra ?? 0)),
+    da: roundMoney(Number(data.da ?? 0)),
+    ta: roundMoney(Number(data.ta ?? 0)),
+    bonus: roundMoney(Number(data.bonus ?? 0)),
+    otherAllowances: roundMoney(Number(data.otherAllowances ?? 0)),
+    allowances,
+    pfDeduction: roundMoney(Number(data.pfDeduction ?? 0)),
+    taxDeduction: roundMoney(Number(data.taxDeduction ?? 0)),
+    esiDeduction: roundMoney(Number(data.esiDeduction ?? 0)),
+    otherDeductions: roundMoney(Number(data.otherDeductions ?? 0)),
+    deductions,
+    netSalary,
+    transactionId: data.transactionId,
+  });
+
+  return payroll;
+};
+
+export const generatePayrollForEmployeeService = async (
+  input: IGeneratePayrollInput
+) => {
+  const employee = await Employee.findById(input.employee);
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
+
+  const baseSalary = Number(employee.basicSalary ?? 0);
+  if (!baseSalary || baseSalary <= 0) {
+    throw new Error("Employee basic salary is not configured");
+  }
+
+  const existing = await Payroll.findOne({
+    employee: employee._id,
+    month: input.month,
+    year: input.year,
+  }).populate("employee", "firstName lastName employeeCode designation basicSalary department");
+
+  if (existing) {
+    return { payroll: existing, created: false };
+  }
+
+  const breakdown = buildPayrollBreakdown(baseSalary);
+  const payroll = await createPayrollService({
+    employee: String(employee._id),
+    month: input.month,
+    year: input.year,
+    ...breakdown,
+  });
+
+  const populatedPayroll = await Payroll.findById(payroll._id).populate(
+    "employee",
+    "firstName lastName employeeCode designation basicSalary department"
+  );
+
+  return {
+    payroll: populatedPayroll ?? payroll,
+    created: true,
+  };
 };
 
 export const getAllPayrollsService = async (filter: {

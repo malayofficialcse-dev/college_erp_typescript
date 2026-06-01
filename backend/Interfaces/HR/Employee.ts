@@ -19,6 +19,15 @@ export interface IEmployee extends Document {
   dateOfBirth?: Date;
   joiningDate?: Date;
   basicSalary?: number;
+  hra?: number;
+  da?: number;
+  ta?: number;
+  bonus?: number;
+  otherAllowances?: number;
+  pfDeduction?: number;
+  taxDeduction?: number;
+  esiDeduction?: number;
+  otherDeductions?: number;
   address?: string;
   department?: Types.ObjectId;
   status: EmployeeStatus;

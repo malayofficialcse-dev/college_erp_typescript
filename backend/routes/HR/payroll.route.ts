@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createPayroll,
+  generatePayroll,
   getAllPayrolls,
   getPayrollById,
   updatePayrollStatus,
@@ -10,6 +11,7 @@ import {
 const router = express.Router();
 
 router.post("/", createPayroll);
+router.post("/generate", generatePayroll);
 router.get("/", getAllPayrolls);
 router.get("/:id", getPayrollById);
 router.patch("/:id/status", updatePayrollStatus);

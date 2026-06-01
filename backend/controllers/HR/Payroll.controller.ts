@@ -5,8 +5,12 @@ import {
   getPayrollByIdService,
   updatePayrollStatusService,
   deletePayrollService,
+  generatePayrollForEmployeeService,
 } from "../../Services/HR/Payroll.service.ts";
 import type { PayrollStatus } from "../../Interfaces/HR/index.ts";
+
+const toSingleValue = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
 
 export const createPayroll = async (req: Request, res: Response) => {
   try {
@@ -23,7 +27,8 @@ export const createPayroll = async (req: Request, res: Response) => {
 
 export const getAllPayrolls = async (req: Request, res: Response) => {
   try {
-    const { employee, status } = req.query as Record<string, string>;
+    const employee = toSingleValue(req.query.employee as string | string[] | undefined);
+    const status = toSingleValue(req.query.status as string | string[] | undefined);
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
     const payrolls = await getAllPayrollsService({
@@ -42,9 +47,44 @@ export const getAllPayrolls = async (req: Request, res: Response) => {
   }
 };
 
+export const generatePayroll = async (req: Request, res: Response) => {
+  try {
+    const { employee, month, year } = req.body as {
+      employee?: string | string[];
+      month?: number;
+      year?: number;
+    };
+
+    const employeeId = toSingleValue(employee);
+
+    if (!employeeId || !month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee, month and year are required",
+      });
+    }
+
+    const result = await generatePayrollForEmployeeService({
+      employee: employeeId,
+      month: Number(month),
+      year: Number(year),
+    });
+
+    res.status(result.created ? 201 : 200).json({
+      success: true,
+      message: result.created
+        ? "Payslip generated successfully"
+        : "Payslip already exists for the selected month",
+      data: result,
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getPayrollById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = toSingleValue(req.params.id);
     if (!id) {
       return res
         .status(400)
@@ -64,7 +104,7 @@ export const getPayrollById = async (req: Request, res: Response) => {
 
 export const updatePayrollStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = toSingleValue(req.params.id);
     if (!id) {
       return res
         .status(400)
@@ -98,7 +138,7 @@ export const updatePayrollStatus = async (req: Request, res: Response) => {
 
 export const deletePayroll = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = toSingleValue(req.params.id);
     if (!id) {
       return res
         .status(400)
