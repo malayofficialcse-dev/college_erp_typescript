@@ -17,6 +17,8 @@ export interface ICreateAdmissionEmiInput {
   paidAmount?: number;
   paidDate?: Date;
   fineAmount?: number;
+  carryOverAmount?: number;
+  creditAmount?: number;
   paymentMethod?: PaymentMethod;
   transactionId?: string;
   receiptNumber?: string;
@@ -36,6 +38,7 @@ export interface IUpdatePaymentInput {
   receiptNumber?: string;
   remarks?: string;
   carryOverAmount?: number;
+  creditAmount?: number;
   chequeDetails?: ChequeDetails;
   bankTransferDetails?: BankTransferDetails;
 }
@@ -91,6 +94,62 @@ export const createAdmissionEmiService = async (
   return AdmissionEmi.create(data);
 };
 
+const getEmiDueAmount = (emi: {
+  emiAmount?: number;
+  fineAmount?: number;
+  carryOverAmount?: number;
+  creditAmount?: number;
+}) =>
+  Math.max(
+    Number(emi.emiAmount || 0) +
+      Number(emi.fineAmount || 0) +
+      Number(emi.carryOverAmount || 0) -
+      Number(emi.creditAmount || 0),
+    0
+  );
+
+const addAdjustmentToNextEmi = async (
+  admissionId: string,
+  currentEmiNumber: number,
+  field: "carryOverAmount" | "creditAmount",
+  amount: number
+) => {
+  if (!amount || amount <= 0) return;
+
+  if (field === "carryOverAmount") {
+    const nextEmi = await AdmissionEmi.findOne({
+      admission: admissionId,
+      emiNumber: currentEmiNumber + 1,
+    });
+
+    if (!nextEmi) return;
+
+    await AdmissionEmi.findByIdAndUpdate(nextEmi._id, {
+      carryOverAmount: Number(nextEmi.carryOverAmount || 0) + amount,
+    });
+    return;
+  }
+
+  let remainingAmount = amount;
+  const futureEmis = await AdmissionEmi.find({
+    admission: admissionId,
+    emiNumber: { $gt: currentEmiNumber },
+  }).sort({ emiNumber: 1 });
+
+  for (const futureEmi of futureEmis) {
+    if (remainingAmount <= 0) break;
+
+    const currentDue = getEmiDueAmount(futureEmi);
+    if (currentDue <= 0) continue;
+
+    const appliedAmount = Math.min(remainingAmount, currentDue);
+    await AdmissionEmi.findByIdAndUpdate(futureEmi._id, {
+      creditAmount: Number(futureEmi.creditAmount || 0) + appliedAmount,
+    });
+    remainingAmount -= appliedAmount;
+  }
+};
+
 const addMonths = (date: Date, months: number) => {
   const next = new Date(date);
   next.setMonth(next.getMonth() + months);
@@ -114,7 +173,7 @@ export const generateEmiScheduleForAdmissionService = async (admissionId: string
   const created = [];
 
   for (let emiNumber = 1; emiNumber <= numberOfEmis; emiNumber += 1) {
-    if (existingNumbers.has(emiNumber)) continue;
+  if (existingNumbers.has(emiNumber)) continue;
 
     const isLast = emiNumber === numberOfEmis;
     const emiAmount = isLast
@@ -127,6 +186,8 @@ export const generateEmiScheduleForAdmissionService = async (admissionId: string
       emiAmount,
       dueDate: addMonths(new Date(admission.admissionDate || new Date()), emiNumber),
       status: "PENDING" as EmiStatus,
+      carryOverAmount: 0,
+      creditAmount: 0,
     });
   }
 
@@ -189,6 +250,7 @@ export const updateEmiPaymentService = async (
   const emi = await AdmissionEmi.findById(id);
   if (!emi) throw new Error("EMI record not found");
   const previousPaidAmount = Number(emi.paidAmount || 0);
+  const dueAmount = getEmiDueAmount(emi);
 
   if (data.paymentMethod) {
     const validation = validatePaymentMethod(data.paymentMethod, data);
@@ -197,30 +259,24 @@ export const updateEmiPaymentService = async (
     }
   }
 
-  const dueAmount = emi.emiAmount + (emi.fineAmount || 0) + (emi.carryOverAmount || 0);
   const paidAmount = data.paidAmount || 0;
 
   if (paidAmount > 0) {
-    const { carryOver, status } = await handlePartialPaymentService(
-      id,
-      paidAmount,
-      dueAmount
-    );
+    const remainingBalance = Math.round((dueAmount - paidAmount) * 100) / 100;
 
-    data.status = status;
-    data.carryOverAmount = carryOver;
+    if (remainingBalance > 0) {
+      data.status = "PARTIAL";
+      await addAdjustmentToNextEmi(emi.admission.toString(), emi.emiNumber, "carryOverAmount", remainingBalance);
+    } else {
+      const excessAmount = Math.abs(remainingBalance);
+      data.status = "PAID";
 
-    if (carryOver > 0 && status === "PARTIAL") {
-      const nextEmi = await getNextEmiService(
-        emi.admission.toString(),
-        emi.emiNumber
-      );
-      if (nextEmi) {
-        await AdmissionEmi.findByIdAndUpdate(nextEmi._id, {
-          carryOverAmount: (nextEmi.carryOverAmount || 0) + carryOver,
-        });
+      if (excessAmount > 0) {
+        await addAdjustmentToNextEmi(emi.admission.toString(), emi.emiNumber, "creditAmount", excessAmount);
       }
     }
+  } else {
+    data.status = emi.status;
   }
 
   const updatedEmi = await AdmissionEmi.findByIdAndUpdate(id, data, {
@@ -252,7 +308,7 @@ export const updateEmiPaymentService = async (
           ? `CHQ-${data.chequeDetails.chequeNumber}`
           : data.transactionId || updatedEmi.transactionId || undefined;
 
-        await upsertFeeRecordService(
+        const feeRecord = await upsertFeeRecordService(
           { source: "EMI", emiId: updatedEmi._id },
           {
             student: admissionDoc.student.toString(),
@@ -271,6 +327,13 @@ export const updateEmiPaymentService = async (
             emiId: updatedEmi._id.toString(),
           }
         );
+
+        if (feeRecord?.receiptNumber && feeRecord.receiptNumber !== updatedEmi.receiptNumber) {
+          await AdmissionEmi.findByIdAndUpdate(updatedEmi._id, {
+            receiptNumber: feeRecord.receiptNumber,
+          });
+          updatedEmi.receiptNumber = feeRecord.receiptNumber;
+        }
       }
     } catch (feeErr) {
       console.warn("[AdmissionEmi] Could not mirror payment to Fee ledger:", feeErr);

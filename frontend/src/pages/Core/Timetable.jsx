@@ -17,11 +17,23 @@ const Timetable = () => (
     endpoint="/timetables"
     icon="bi-calendar3"
     relations={{
+      departments: { endpoint: '/departments', labelPaths: ['code', 'name'] },
       sections: { endpoint: '/sections', labelPaths: ['code', 'name'] },
       subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
       teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'] },
       classrooms: { endpoint: '/classrooms', labelPaths: ['roomNumber', 'building'] },
     }}
+    filters={[
+      {
+        name: 'department',
+        label: 'Department',
+        type: 'select',
+        options: 'departments',
+        path: 'section.department.id',
+        cols: 4,
+        placeholder: 'All Departments',
+      },
+    ]}
     fields={[
       { name: 'section', label: 'Section', type: 'select', options: 'sections' },
       { name: 'subject', label: 'Subject', type: 'select', options: 'subjects' },

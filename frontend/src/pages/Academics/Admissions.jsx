@@ -142,7 +142,6 @@ const Admissions = () => {
 
       const admissionPayload = {
         admissionNumber: 'ADM' + Date.now().toString().slice(-8),
-        billNumber: 'BILL' + Date.now().toString().slice(-8),
         student: targetStudentId,
         course: f.courseId,
         department: f.departmentId,

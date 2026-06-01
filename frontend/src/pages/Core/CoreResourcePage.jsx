@@ -25,13 +25,19 @@ const getDerivedValue = (item, field) => {
   return getValue(item, field.name);
 };
 
+const getFilterValue = (item, filter) => {
+  if (filter.deriveValue) return filter.deriveValue(item);
+  if (filter.path) return getValue(item, filter.path);
+  return getValue(item, filter.name);
+};
+
 const emptyForm = (fields) =>
   fields.reduce((form, field) => {
     form[field.name] = field.defaultValue ?? (field.type === 'checkbox' ? false : '');
     return form;
   }, {});
 
-const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = {} }) => {
+const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = {}, filters = [] }) => {
   const [items, setItems] = useState([]);
   const [options, setOptions] = useState({});
   const [loading, setLoading] = useState(true);
@@ -40,8 +46,12 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [current, setCurrent] = useState(() => emptyForm(fields));
+  const [filterValues, setFilterValues] = useState(() =>
+    filters.reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {})
+  );
 
   const selectFields = useMemo(() => fields.filter((field) => field.type === 'select'), [fields]);
+  const activeFilters = useMemo(() => filters.filter((filter) => filter.type === 'select'), [filters]);
 
   const fetchItems = async () => {
     try {
@@ -74,6 +84,10 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     fetchItems();
     if (selectFields.length) fetchOptions();
   }, [endpoint]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setFilterValues(filters.reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {}));
+  }, [filters]);
 
   const openAdd = () => {
     setIsEdit(false);
@@ -153,6 +167,15 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     return value || 'N/A';
   };
 
+  const filteredItems = items.filter((item) =>
+    activeFilters.every((filter) => {
+      const selectedValue = filterValues[filter.name];
+      if (!selectedValue) return true;
+      const itemValue = getFilterValue(item, filter);
+      return String(itemValue || '') === String(selectedValue);
+    })
+  );
+
   return (
     <div className="container-fluid mt-3">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -163,6 +186,42 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
+
+      {activeFilters.length > 0 && (
+        <div className="card shadow-sm mb-3">
+          <div className="card-body">
+            <Row className="g-3 align-items-end">
+              {activeFilters.map((filter) => (
+                <Col md={filter.cols || 4} key={filter.name}>
+                  <Form.Group>
+                    <Form.Label>{filter.label}</Form.Label>
+                    <Form.Select
+                      value={filterValues[filter.name] || ''}
+                      onChange={(event) => setFilterValues((prev) => ({ ...prev, [filter.name]: event.target.value }))}
+                    >
+                      <option value="">{filter.placeholder || `All ${filter.label}`}</option>
+                      {(options[filter.options] || []).map((option) => (
+                        <option key={getId(option) || option.value} value={getId(option) || option.value}>
+                          {option.label || getLabel(option, relations[filter.options]?.labelPaths)}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              ))}
+              <Col md={12} className="d-flex justify-content-end">
+                <Button
+                  variant="link"
+                  className="text-danger text-decoration-none p-0"
+                  onClick={() => setFilterValues(filters.reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {}))}
+                >
+                  Clear Filters
+                </Button>
+              </Col>
+            </Row>
+          </div>
+        </div>
+      )}
 
       <div className="card shadow-sm">
         <div className="card-body p-0">
@@ -182,8 +241,8 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
                     <Spinner animation="border" size="sm" className="me-2" /> Loading
                   </td>
                 </tr>
-              ) : items.length ? (
-                items.map((item) => (
+              ) : filteredItems.length ? (
+                filteredItems.map((item) => (
                   <tr key={getId(item)}>
                     {columns.map((column) => (
                       <td key={column.key} className={column.className}>{renderCell(item, column)}</td>

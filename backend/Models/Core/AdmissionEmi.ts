@@ -28,6 +28,7 @@ const admissionEmiSchema = new Schema<IAdmissionEmi>(
     },
     remarks: { type: String, trim: true },
     carryOverAmount: { type: Number, default: 0, min: 0 },
+    creditAmount: { type: Number, default: 0, min: 0 },
     chequeDetails: {
       bankName: { type: String, trim: true },
       holderName: { type: String, trim: true },

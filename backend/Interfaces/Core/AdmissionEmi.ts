@@ -32,6 +32,7 @@ export interface IAdmissionEmi extends Document {
   status: EmiStatus;
   remarks?: string;
   carryOverAmount: number;
+  creditAmount: number;
   chequeDetails?: ChequeDetails;
   bankTransferDetails?: BankTransferDetails;
 }

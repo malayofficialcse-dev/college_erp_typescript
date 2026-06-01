@@ -1,4 +1,5 @@
 import Admission from "../../Models/Core/Admission.ts";
+import Session from "../../Models/Core/Session.ts";
 import type { AdmissionStatus, PaymentPlan, ChequeDetails, BankTransferDetails } from "../../Interfaces/Core/index.ts";
 import { generateEmiScheduleForAdmissionService } from "./AdmissionEmi.service.ts";
 import { upsertFeeRecordService } from "./Fee.service.ts";
@@ -27,6 +28,43 @@ export interface ICreateAdmissionInput {
   status?: AdmissionStatus;
   remarks?: string;
 }
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeSessionLabel = (label: string) =>
+  label.trim().toUpperCase().replace(/\s+/g, "-").replace(/\//g, "-");
+
+const getCurrentSessionLabel = async () => {
+  const activeSession = await Session.findOne({ isActive: true })
+    .populate("academicYear", "name")
+    .sort({ updatedAt: -1, startDate: -1 });
+
+  const fallbackSession = activeSession || await Session.findOne()
+    .populate("academicYear", "name")
+    .sort({ endDate: -1, updatedAt: -1 });
+
+  const academicYearName = (fallbackSession?.academicYear as { name?: string } | undefined)?.name;
+  const label = fallbackSession?.label || academicYearName || "SESSION";
+  return normalizeSessionLabel(String(label));
+};
+
+const getNextBillSequence = async (sessionLabel: string) => {
+  const prefix = `CLG/${sessionLabel}/`;
+  const billNumbers = await Admission.find({
+    billNumber: { $regex: `^${escapeRegex(prefix)}\\d{5}$` },
+  })
+    .select("billNumber")
+    .lean();
+
+  const highestSequence = billNumbers.reduce((max, admission) => {
+    const billNumber = String(admission.billNumber || "");
+    const suffix = billNumber.split("/").pop() || "";
+    const sequence = Number.parseInt(suffix, 10);
+    return Number.isNaN(sequence) ? max : Math.max(max, sequence);
+  }, 0);
+
+  return `${prefix}${String(highestSequence + 1).padStart(5, "0")}`;
+};
 
 const syncAdmissionPaymentToLedger = async (admission: any) => {
   const amountPaid = Number(admission.amountPaid || admission.advanceAmount || 0);
@@ -62,6 +100,11 @@ const syncAdmissionPaymentToLedger = async (admission: any) => {
 };
 
 export const createAdmissionService = async (data: ICreateAdmissionInput) => {
+  if (!data.billNumber) {
+    const sessionLabel = await getCurrentSessionLabel();
+    data.billNumber = await getNextBillSequence(sessionLabel);
+  }
+
   const existing = await Admission.findOne({
     $or: [
       { admissionNumber: data.admissionNumber },

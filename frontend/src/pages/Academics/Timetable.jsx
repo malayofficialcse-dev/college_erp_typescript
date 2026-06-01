@@ -5,12 +5,14 @@ import api from "../../services/api";
 const Timetable = () => {
   const [timetables, setTimetables] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [currentTimetable, setCurrentTimetable] = useState(null);
 
   // Advanced Filters State
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [selectedDays, setSelectedDays] = useState([]);
   const [selectedTeachers, setSelectedTeachers] = useState([]);
@@ -26,6 +28,7 @@ const Timetable = () => {
 
   useEffect(() => {
     fetchTimetables();
+    fetchDepartments();
     fetchCourses();
     fetchSubjects();
     fetchTeachers();
@@ -35,6 +38,8 @@ const Timetable = () => {
     ...timetable,
     courseId: timetable.course?.id || timetable.courseId || "",
     courseName: timetable.course?.name || timetable.courseName || "",
+    departmentId: timetable.department?.id || timetable.course?.department?.id || timetable.departmentId || timetable.course?.departmentId || "",
+    departmentName: timetable.department?.name || timetable.course?.department?.name || timetable.departmentName || "",
     subjectId: timetable.subject?.id || timetable.subjectId || "",
     subjectName: timetable.subject?.subjectName || timetable.subject?.name || timetable.subjectName || timetable.subject || "",
     teacherId: timetable.teacher?.id || timetable.teacherId || "",
@@ -59,7 +64,21 @@ const Timetable = () => {
     try {
       const res = await api.get("/courses");
       const data = res.data.content || res.data;
-      setCourses(Array.isArray(data) ? data : []);
+      setCourses(Array.isArray(data) ? data.map((course) => ({
+        ...course,
+        departmentId: course.department?.id || course.departmentId || "",
+        departmentName: course.department?.name || course.departmentName || "",
+      })) : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get("/departments");
+      const data = res.data.content || res.data;
+      setDepartments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     }
@@ -145,6 +164,16 @@ const Timetable = () => {
     }
   };
 
+  const getTimetableDepartmentId = (timetable) => (
+    (() => {
+      const matchedCourse = courses.find((course) => String(course.id) === String(timetable.courseId));
+      return timetable.departmentId?.toString()
+        || matchedCourse?.departmentId?.toString()
+        || matchedCourse?.department?.id?.toString()
+        || "";
+    })()
+  );
+
   const toMinutes = (time = "") => {
     // Expect HH:mm
     const [h = "0", m = "0"] = time.split(":");
@@ -159,6 +188,7 @@ const Timetable = () => {
     const toMins = endTimeTo ? toMinutes(endTimeTo) : null;
 
     return timetables.filter((t) => {
+      const matchDepartment = selectedDepartments.length === 0 || selectedDepartments.includes(getTimetableDepartmentId(t));
       const matchCourse = selectedCourses.length === 0 || selectedCourses.includes(t.courseId?.toString());
       const matchDay = selectedDays.length === 0 || selectedDays.includes(t.dayOfWeek);
       const matchTeacher = selectedTeachers.length === 0 || selectedTeachers.includes(t.teacherId?.toString());
@@ -177,12 +207,18 @@ const Timetable = () => {
       const matchStartFrom = fromMins === null || (tStart !== null && tStart >= fromMins);
       const matchEndTo = toMins === null || (tEnd !== null && tEnd <= toMins);
 
-      return matchCourse && matchDay && matchTeacher && matchSubject && matchSearch && matchRoom && matchStartFrom && matchEndTo;
+      return matchDepartment && matchCourse && matchDay && matchTeacher && matchSubject && matchSearch && matchRoom && matchStartFrom && matchEndTo;
     });
   };
 
 
   const filteredTimetables = getFilteredTimetables();
+  const currentCourse = currentTimetable
+    ? courses.find((course) => String(course.id) === String(currentTimetable.courseId))
+    : null;
+  const activeDepartmentName = currentTimetable
+    ? currentTimetable.departmentName || currentCourse?.departmentName || currentCourse?.department?.name || ""
+    : "";
 
   return (
     <div className="py-2">
@@ -198,8 +234,24 @@ const Timetable = () => {
         <Card.Body className="d-flex flex-wrap gap-3 align-items-center bg-light rounded">
           <div className="fw-semibold text-secondary me-2"><i className="bi bi-funnel-fill me-1"></i> Filters:</div>
 
+          <Dropdown>
+            <Dropdown.Toggle variant="white" className="border shadow-sm">
+              Departments {selectedDepartments.length > 0 && <Badge bg="primary" className="ms-1">{selectedDepartments.length}</Badge>}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className="p-2 shadow" style={{ minWidth: '240px', maxHeight: '300px', overflowY: 'auto' }}>
+              {departments.map((department) => (
+                <Form.Check
+                  key={department.id}
+                  type="checkbox"
+                  label={department.name}
+                  checked={selectedDepartments.includes(department.id.toString())}
+                  onChange={() => toggleFilter(setSelectedDepartments, selectedDepartments, department.id.toString())}
+                  className="mb-1"
+                />
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
 
-          
           <Dropdown>
             <Dropdown.Toggle variant="white" className="border shadow-sm">
               Courses {selectedCourses.length > 0 && <Badge bg="primary" className="ms-1">{selectedCourses.length}</Badge>}
@@ -309,8 +361,9 @@ const Timetable = () => {
           </div>
 
 
-          {(selectedCourses.length > 0 || selectedDays.length > 0 || selectedTeachers.length > 0 || selectedSubjects.length > 0 || searchKeyword || roomKeyword || startTimeFrom || endTimeTo) && (
+          {(selectedDepartments.length > 0 || selectedCourses.length > 0 || selectedDays.length > 0 || selectedTeachers.length > 0 || selectedSubjects.length > 0 || searchKeyword || roomKeyword || startTimeFrom || endTimeTo) && (
             <Button variant="link" className="text-danger text-decoration-none ms-auto" onClick={() => {
+              setSelectedDepartments([]);
               setSelectedCourses([]);
               setSelectedDays([]);
               setSelectedTeachers([]);
@@ -384,6 +437,15 @@ const Timetable = () => {
                   <option value="">Select Course</option>
                   {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </Form.Select>
+              </Col>
+              <Col md={6}>
+                <Form.Label className="small fw-semibold text-muted mb-1">Department</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={activeDepartmentName}
+                  placeholder="Auto-filled from course"
+                  readOnly
+                />
               </Col>
               <Col md={6}>
                 <Form.Label className="small fw-semibold text-muted mb-1">Day of Week</Form.Label>

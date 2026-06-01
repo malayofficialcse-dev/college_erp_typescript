@@ -8,6 +8,15 @@ const METHOD_ICON = { CASH: 'bi-cash-coin', UPI: 'bi-qr-code-scan', BANK_TRANSFE
 
 const toDateInput = (date) => new Date(date).toISOString().split('T')[0];
 
+const getEmiDueAmount = (emi) =>
+  Math.max(
+    Number(emi?.emiAmount || 0) +
+      Number(emi?.fineAmount || 0) +
+      Number(emi?.carryOverAmount || 0) -
+      Number(emi?.creditAmount || 0),
+    0
+  );
+
 const addMonths = (date, months) => {
   const next = new Date(date);
   next.setMonth(next.getMonth() + months);
@@ -145,7 +154,7 @@ const AdmissionEmiSchedule = () => {
 
   const openPayModal = (emi) => {
     setSelectedEmi(emi);
-    const dueAmount = emi.emiAmount + (emi.fineAmount || 0) + (emi.carryOverAmount || 0);
+    const dueAmount = getEmiDueAmount(emi);
     setPayForm({
       paidAmount: dueAmount,
       paidDate: new Date().toISOString().split('T')[0],
@@ -213,6 +222,7 @@ const AdmissionEmiSchedule = () => {
 
   const printReceipt = (emi) => {
     if (!admission) return;
+    const dueAmount = getEmiDueAmount(emi);
     const w = window.open('', '_blank');
     w.document.write(`
       <html><head>
@@ -239,7 +249,10 @@ const AdmissionEmiSchedule = () => {
           </div>
           <table class="table table-bordered my-3">
             <tr><td>EMI Amount</td><td class="text-end">₹${emi.emiAmount}</td></tr>
+            <tr><td>Carry Over Amount</td><td class="text-end">₹${emi.carryOverAmount || 0}</td></tr>
+            <tr><td>Excess Credit</td><td class="text-end">₹${emi.creditAmount || 0}</td></tr>
             <tr><td>Fine / Late Charge</td><td class="text-end">₹${emi.fineAmount || 0}</td></tr>
+            <tr><td>Total Due</td><td class="text-end">₹${dueAmount}</td></tr>
             <tr class="table-light fw-bold"><td>Total Paid</td><td class="text-end">₹${emi.paidAmount}</td></tr>
           </table>
           <div class="row mt-4">
@@ -360,6 +373,8 @@ const AdmissionEmiSchedule = () => {
                   <th className="px-4 py-3">EMI #</th>
                   <th>Due Date</th>
                   <th>EMI Amount</th>
+                  <th>Carry Over</th>
+                  <th>Excess Credit</th>
                   <th>Fine</th>
                   <th>Paid Amount</th>
                   <th>Paid Date</th>
@@ -370,11 +385,15 @@ const AdmissionEmiSchedule = () => {
                 </tr>
               </thead>
               <tbody>
-                {emis.map(emi => (
+                {emis.map((emi) => {
+                  const dueAmount = getEmiDueAmount(emi);
+                  return (
                   <tr key={emi.id}>
                     <td className="px-4 fw-bold text-primary">EMI {emi.emiNumber}</td>
                     <td>{toDateInput(emi.dueDate)}</td>
                     <td className="fw-semibold">₹{Number(emi.emiAmount).toLocaleString()}</td>
+                    <td className="text-warning">{emi.carryOverAmount > 0 ? `₹${Number(emi.carryOverAmount).toLocaleString()}` : '—'}</td>
+                    <td className="text-info">{emi.creditAmount > 0 ? `₹${Number(emi.creditAmount).toLocaleString()}` : '—'}</td>
                     <td className="text-danger">{emi.fineAmount > 0 ? `₹${emi.fineAmount}` : '—'}</td>
                     <td className="text-success fw-semibold">{emi.paidAmount ? `₹${Number(emi.paidAmount).toLocaleString()}` : '—'}</td>
                     <td>{emi.paidDate ? toDateInput(emi.paidDate) : '—'}</td>
@@ -402,24 +421,27 @@ const AdmissionEmiSchedule = () => {
                       </Badge>
                     </td>
                     <td className="text-end px-4 d-flex gap-2 justify-content-end">
-                      {emi.status !== 'PAID' && (
+                      {Number(emi.paidAmount || 0) <= 0 && dueAmount > 0 && (
                         <Button size="sm" variant="success" className="rounded-pill"
                           onClick={() => openPayModal(emi)}>
                           <i className="bi bi-check2-circle me-1"></i>Pay
                         </Button>
                       )}
-                      {emi.status === 'PAID' && (
+                      {Number(emi.paidAmount || 0) > 0 && (
                         <Button size="sm" variant="light" className="rounded-pill border"
                           onClick={() => printReceipt(emi)}>
                           <i className="bi bi-printer me-1"></i>Receipt
                         </Button>
                       )}
+                      {Number(emi.paidAmount || 0) <= 0 && dueAmount <= 0 && (
+                        <Badge bg="info" className="rounded-pill px-3 py-2">Settled by Credit</Badge>
+                      )}
                     </td>
                   </tr>
-                ))}
+                );})}
                 {emis.length === 0 && (
                   <tr>
-                    <td colSpan="10" className="text-center py-5 text-muted">
+                    <td colSpan="12" className="text-center py-5 text-muted">
                       No installment rows found. Use Generate Schedule to create them.
                     </td>
                   </tr>
@@ -458,6 +480,18 @@ const AdmissionEmiSchedule = () => {
                 <Form.Label className="small fw-bold text-muted">Amount to Pay (₹) *</Form.Label>
                 <Form.Control type="number" step="0.01" className="rounded-3" required
                   value={payForm.paidAmount} onChange={e => setPayForm({ ...payForm, paidAmount: e.target.value })} />
+                <small className="text-muted d-block mt-1">
+                  Due: ₹{Number(getEmiDueAmount(selectedEmi)).toLocaleString()}
+                </small>
+                {selectedEmi && (
+                  <small className="d-block mt-1 text-secondary">
+                    {Number(payForm.paidAmount || 0) < getEmiDueAmount(selectedEmi)
+                      ? `Remaining to carry forward: ₹${(getEmiDueAmount(selectedEmi) - Number(payForm.paidAmount || 0)).toLocaleString()}`
+                      : Number(payForm.paidAmount || 0) > getEmiDueAmount(selectedEmi)
+                        ? `Excess to reduce next installment: ₹${(Number(payForm.paidAmount || 0) - getEmiDueAmount(selectedEmi)).toLocaleString()}`
+                        : 'This payment exactly settles the installment.'}
+                  </small>
+                )}
               </Col>
               <Col md={6}>
                 <Form.Label className="small fw-bold text-muted">Fine / Late Charge (₹)</Form.Label>
