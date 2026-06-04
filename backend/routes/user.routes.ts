@@ -5,6 +5,7 @@ import {
   getSingleUserController,
   getAllUserController,
   getUserEmployeeController,
+  getUserStudentController,
   getUserPermissionsController,
   updateUserController,
   updateUserPermissionsController,
@@ -18,6 +19,7 @@ router.get("/", getAllUserController);
 router.get("/all-users", getAllUserController);
 router.get("/:id/permissions", getUserPermissionsController);
 router.get("/:id/employee", getUserEmployeeController);
+router.get("/:id/student", getUserStudentController);
 router.put("/:id/permissions", updateUserPermissionsController);
 router.put("/:id", updateUserController);
 router.get("/:id", getSingleUserController);

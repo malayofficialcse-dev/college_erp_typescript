@@ -50,6 +50,16 @@ export const PAGE_PERMISSION_GROUPS = [
     ],
   },
   {
+    title: 'Student Portal',
+    pages: [
+      { key: 'student-portal-grades', label: 'My Grades', path: '/student-portal/my-grades', alwaysVisible: true },
+      { key: 'student-portal-attendance', label: 'My Attendance', path: '/student-portal/my-attendance', alwaysVisible: true },
+      { key: 'student-portal-fees', label: 'My Fees', path: '/student-portal/my-fees', alwaysVisible: true },
+      { key: 'student-portal-timetable', label: 'My Timetable', path: '/student-portal/my-timetable', alwaysVisible: true },
+      { key: 'student-portal-exams', label: 'My Exam Schedule', path: '/student-portal/my-exams', alwaysVisible: true },
+    ],
+  },
+  {
     title: 'Employee Centre',
     pages: [
       { key: 'my-profile', label: 'My Profile', path: '/my-profile' },

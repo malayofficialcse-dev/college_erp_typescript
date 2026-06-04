@@ -99,6 +99,39 @@ export const getUserEmployeeController = async (req: Request, res: Response) => 
   }
 };
 
+export const getUserStudentController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User id is required" });
+    }
+
+    const user = await UserAccount.findById(userId).populate({
+      path: "student",
+      populate: [
+        { path: "department", select: "name code" },
+        { path: "course", select: "name code" },
+        { path: "section", select: "name" },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.student) {
+      return res.status(404).json({
+        success: false,
+        message: "No student profile linked to this account",
+      });
+    }
+
+    res.status(200).json({ success: true, data: user.student });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getUserPermissionsController = async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;

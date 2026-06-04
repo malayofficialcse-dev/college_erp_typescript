@@ -83,6 +83,18 @@ const Layout = () => {
       ]
     },
     {
+      title: 'Student Portal',
+      icon: 'bi-backpack-fill',
+      isGroup: true,
+      items: [
+        { path: '/student-portal/my-grades', name: 'My Grades', icon: 'bi-award' },
+        { path: '/student-portal/my-attendance', name: 'My Attendance', icon: 'bi-calendar-check' },
+        { path: '/student-portal/my-fees', name: 'My Fees', icon: 'bi-receipt' },
+        { path: '/student-portal/my-timetable', name: 'My Timetable', icon: 'bi-calendar3' },
+        { path: '/student-portal/my-exams', name: 'My Exams', icon: 'bi-calendar-event' },
+      ]
+    },
+    {
       title: 'Employee Centre',
       icon: 'bi-person-circle',
       isGroup: true,
@@ -205,7 +217,11 @@ const Layout = () => {
     if (path.includes('book-reservations')) return 'Book Reservations';
     if (path.includes('hostel')) return 'Hostel & Housing Allocation';
     if (path.includes('transport')) return 'Transportation Routes';
-    if (path.includes('reports')) return 'Reports & Analytics';
+    if (path.includes('student-portal/my-grades')) return 'My Grades';
+    if (path.includes('student-portal/my-attendance')) return 'My Attendance';
+    if (path.includes('student-portal/my-fees')) return 'My Fees';
+    if (path.includes('student-portal/my-timetable')) return 'My Timetable';
+    if (path.includes('student-portal/my-exams')) return 'My Exam Schedule';
     return 'ERP Portal';
   };
 

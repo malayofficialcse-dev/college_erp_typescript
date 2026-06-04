@@ -4,6 +4,7 @@ import departmentRoutes from "./routes/Core/department.route.ts";
 import courseRoutes from "./routes/Core/course.route.ts";
 import academicYearRoutes from "./routes/Core/academicYear.route.ts";
 import semesterRoutes from "./routes/Core/semester.route.ts";
+import studentPortalRoutes from "./routes/Core/studentPortal.route.ts";
 import subjectRoutes from "./routes/Core/subject.route.ts";
 import classroomRoutes from "./routes/Core/classroom.route.ts";
 
@@ -81,6 +82,7 @@ app.use("/api/v1/sections", sectionRoutes);
 app.use("/api/v1/core/sections", sectionRoutes);
 app.use("/api/v1/sessions", sessionRoutes);
 app.use("/api/v1/core/sessions", sessionRoutes);
+app.use("/api/v1/student-portal", studentPortalRoutes);
 app.use("/api/v1/admissions", admissionRoutes);
 app.use("/api/v1/core/admissions", admissionRoutes);
 app.use("/api/v1/admission-emi", admissionEmiRoutes);

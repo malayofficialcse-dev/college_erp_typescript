@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PageAccessGuard from './components/PageAccessGuard';
 import Layout from './components/Layout';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -18,6 +19,14 @@ import Teachers from './pages/Core/Teachers';
 import Subjects from './pages/Core/Subjects';
 import AcademicYears from './pages/Core/AcademicYears';
 import Semesters from './pages/Core/Semesters';
+
+// Student Portal Pages
+import MyGrades from './pages/StudentPortal/MyGrades';
+import MyAttendanceStudent from './pages/StudentPortal/MyAttendance';
+import MyFees from './pages/StudentPortal/MyFees';
+import MyTimetableStudent from './pages/StudentPortal/MyTimetable';
+import MyExamScheduleStudent from './pages/StudentPortal/MyExamSchedule';
+
 import Attendance from './pages/Core/Attendance';
 import ExamResults from './pages/Core/ExamResults';
 import Notices from './pages/Communication/Notices';
@@ -50,7 +59,7 @@ import CoreCounseling from './pages/Core/Counseling';
 // Employee Centre
 import MyProfile from './pages/EmployeeCentre/MyProfile';
 import MyLeaves from './pages/EmployeeCentre/MyLeaves';
-import MyAttendance from './pages/EmployeeCentre/MyAttendance';
+import MyAttendanceEmp from './pages/EmployeeCentre/MyAttendance';
 import MyPayslips from './pages/EmployeeCentre/MyPayslips';
 import MyResignation from './pages/EmployeeCentre/MyResignation';
 
@@ -110,7 +119,7 @@ function App() {
               <Route path="payroll" element={<Payroll />} />
               <Route path="fees" element={<Fees />} />
               <Route path="payment-analysis" element={<PaymentAnalysis />} />
-              <Route path="scholarships" element={<Scholarships />} />
+              <Route path="scholarships" element={<PageAccessGuard pageKey="scholarships"><Scholarships /></PageAccessGuard>} />
               <Route path="library" element={<Library />} />
               <Route path="hostel" element={<Hostel />} />
               <Route path="transport" element={<Transport />} />
@@ -135,6 +144,14 @@ function App() {
               {/* HR Inbox Routes */}
               <Route path="hr-leave-inbox" element={<HrLeaveInbox />} />
               <Route path="hr-resignation-inbox" element={<HrResignationInbox />} />
+
+              {/* Student Portal */}
+              <Route path="student-portal/my-grades" element={<PageAccessGuard pageKey="student-portal-grades"><MyGrades /></PageAccessGuard>} />
+              <Route path="student-portal/my-attendance" element={<PageAccessGuard pageKey="student-portal-attendance"><MyAttendanceStudent /></PageAccessGuard>} />
+              <Route path="student-portal/my-fees" element={<PageAccessGuard pageKey="student-portal-fees"><MyFees /></PageAccessGuard>} />
+              <Route path="student-portal/my-timetable" element={<PageAccessGuard pageKey="student-portal-timetable"><MyTimetableStudent /></PageAccessGuard>} />
+              <Route path="student-portal/my-exams" element={<PageAccessGuard pageKey="student-portal-exams"><MyExamScheduleStudent /></PageAccessGuard>} />
+
             </Route>
           </Routes>
         </AuthProvider>
