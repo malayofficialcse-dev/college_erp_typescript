@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGO_URI_ATLAS ?? "mongodb://localhost:27017/erp";
+  const mongoUri = process.env.MONGO_URI ?? "mongodb://localhost:27017/erp";
 
   try {
     await mongoose.connect(mongoUri);

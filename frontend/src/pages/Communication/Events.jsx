@@ -20,7 +20,9 @@ const Events = () => {
   const fetchEvents = async () => {
     try {
       const response = await api.get('/events');
-      setEvents(response.data.content || response.data);
+      // api interceptor unwraps data; handle both array and {data:[]} shapes
+      const list = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+      setEvents(list);
     } catch (error) {
       console.error('Error fetching events:', error);
     }
@@ -29,7 +31,8 @@ const Events = () => {
   const fetchDepartments = async () => {
     try {
       const response = await api.get('/departments');
-      setDepartments(response.data.content || response.data);
+      const list = Array.isArray(response.data) ? response.data : (response.data?.data ?? []);
+      setDepartments(list);
     } catch (error) {
       console.error('Error fetching departments:', error);
     }
@@ -59,12 +62,20 @@ const Events = () => {
     e.preventDefault();
     try {
       const payload = {
-        ...currentEvent,
-        organizedByDept: currentEvent.organizedByDeptId ? { id: parseInt(currentEvent.organizedByDeptId) } : null
+        title:            currentEvent.title,
+        description:      currentEvent.description,
+        eventType:        currentEvent.eventType,
+        eventDate:        currentEvent.eventDate,
+        startTime:        currentEvent.startTime,
+        endTime:          currentEvent.endTime,
+        venue:            currentEvent.venue,
+        organizerName:    currentEvent.organizerName,
+        status:           currentEvent.status,
+        organizedByDept:  currentEvent.organizedByDeptId || undefined,
       };
-      
+
       if (isEdit) {
-        await api.put(`/events/${currentEvent.id}`, payload);
+        await api.put(`/events/${currentEvent._id || currentEvent.id}`, payload);
       } else {
         await api.post('/events', payload);
       }
@@ -109,14 +120,16 @@ const Events = () => {
               </tr>
             </thead>
             <tbody>
-              {events.map(event => (
-                <tr key={event.id}>
+              {events.length === 0 ? (
+                <tr><td colSpan="6" className="text-center py-4 text-muted">No events found.</td></tr>
+              ) : events.map(event => (
+                <tr key={event._id || event.id}>
                   <td className="px-4 fw-bold">{event.title}</td>
                   <td>{event.eventType}</td>
-                  <td>{event.eventDate}</td>
-                  <td>{event.venue}</td>
+                  <td>{event.eventDate ? new Date(event.eventDate).toLocaleDateString() : '—'}</td>
+                  <td>{event.venue || '—'}</td>
                   <td>
-                    <Badge bg={event.status === 'UPCOMING' ? 'info' : event.status === 'COMPLETED' ? 'success' : 'secondary'}>
+                    <Badge bg={event.status === 'UPCOMING' ? 'info' : event.status === 'COMPLETED' ? 'success' : event.status === 'ONGOING' ? 'warning' : 'secondary'}>
                       {event.status}
                     </Badge>
                   </td>
@@ -124,7 +137,7 @@ const Events = () => {
                     <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(event)}>
                       <i className="bi bi-pencil"></i>
                     </Button>
-                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(event.id)}>
+                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(event._id || event.id)}>
                       <i className="bi bi-trash"></i>
                     </Button>
                   </td>
@@ -202,7 +215,7 @@ const Events = () => {
                   <Form.Label>Organizing Department</Form.Label>
                   <Form.Select name="organizedByDeptId" value={currentEvent.organizedByDeptId} onChange={handleFormChange}>
                     <option value="">Select Department</option>
-                    {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+                    {departments.map(dept => <option key={dept._id || dept.id} value={dept._id || dept.id}>{dept.name}</option>)}
                   </Form.Select>
                 </Form.Group>
               </Col>

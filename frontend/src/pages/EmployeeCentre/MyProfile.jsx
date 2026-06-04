@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Card, Row, Col, Form, Button, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Card, Row, Col, Form, Button, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../../services/api';
 import { fetchMyEmployee } from '../../services/employeeSelfService';
@@ -13,6 +13,13 @@ const MyProfile = () => {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+
+  // Change Password
+  const [showPwModal, setShowPwModal]   = useState(false);
+  const [pwForm, setPwForm]             = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwError, setPwError]           = useState(null);
+  const [pwSuccess, setPwSuccess]       = useState(null);
+  const [pwSaving, setPwSaving]         = useState(false);
 
   useEffect(() => {
     fetchMyProfile();
@@ -54,6 +61,34 @@ const MyProfile = () => {
     }
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwError(null);
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      setPwError('New passwords do not match.');
+      return;
+    }
+    if (pwForm.newPassword.length < 6) {
+      setPwError('New password must be at least 6 characters.');
+      return;
+    }
+    try {
+      setPwSaving(true);
+      await api.post('/auth/change-password', {
+        userId:          user.id,
+        currentPassword: pwForm.currentPassword,
+        newPassword:     pwForm.newPassword,
+      });
+      setPwSuccess('Password changed successfully!');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => { setShowPwModal(false); setPwSuccess(null); }, 1800);
+    } catch (err) {
+      setPwError(err.response?.data?.message || 'Failed to change password.');
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
   if (loading) return (
     <div className="d-flex justify-content-center align-items-center py-5">
       <Spinner animation="border" variant="primary" className="me-2" />
@@ -79,9 +114,14 @@ const MyProfile = () => {
           <p className="text-muted mb-0 small">View and update your personal & professional details</p>
         </div>
         {!editMode ? (
-          <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => setEditMode(true)}>
-            <i className="bi bi-pencil-fill me-2"></i>Edit Profile
-          </Button>
+          <div className="d-flex gap-2">
+            <Button variant="outline-warning" className="rounded-pill px-4" onClick={() => setShowPwModal(true)}>
+              <i className="bi bi-key-fill me-2"></i>Change Password
+            </Button>
+            <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => setEditMode(true)}>
+              <i className="bi bi-pencil-fill me-2"></i>Edit Profile
+            </Button>
+          </div>
         ) : (
           <Button variant="outline-secondary" className="rounded-pill px-4" onClick={() => { setEditMode(false); setFormData({ ...employee }); }}>
             <i className="bi bi-x-lg me-2"></i>Cancel
@@ -179,6 +219,52 @@ const MyProfile = () => {
           </div>
         )}
       </Form>
+
+      {/* Change Password Modal */}
+      <Modal show={showPwModal} onHide={() => { setShowPwModal(false); setPwError(null); setPwSuccess(null); }}>
+        <Modal.Header closeButton>
+          <Modal.Title><i className="bi bi-key-fill me-2 text-warning"></i>Change Password</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleChangePassword}>
+          <Modal.Body>
+            {pwSuccess && <Alert variant="success" className="border-0">{pwSuccess}</Alert>}
+            {pwError   && <Alert variant="danger"  className="border-0">{pwError}</Alert>}
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold small">Current Password</Form.Label>
+              <Form.Control
+                type="password" placeholder="Enter current password"
+                value={pwForm.currentPassword}
+                onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold small">New Password</Form.Label>
+              <Form.Control
+                type="password" placeholder="At least 6 characters"
+                value={pwForm.newPassword}
+                onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="fw-bold small">Confirm New Password</Form.Label>
+              <Form.Control
+                type="password" placeholder="Repeat new password"
+                value={pwForm.confirmPassword}
+                onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+                required
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowPwModal(false)}>Cancel</Button>
+            <Button variant="warning" type="submit" disabled={pwSaving}>
+              {pwSaving ? <><Spinner size="sm" className="me-2" />Changing...</> : <><i className="bi bi-check-circle-fill me-2"></i>Change Password</>}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
     </div>
   );
 };

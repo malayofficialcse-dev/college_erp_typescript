@@ -36,6 +36,7 @@ import libraryRoutes from "./routes/facilities/library.route.ts";
 import hostelRoutes from "./routes/facilities/hostel.route.ts";
 import transportRoutes from "./routes/facilities/transport.route.ts";
 import noticeRoutes from "./routes/Communication/notice.route.ts";
+import eventRoutes from "./routes/Communication/event.route.ts";
 import authRoutes from "./routes/Auth/auth.route.ts";
 
 import cors from "cors";
@@ -117,5 +118,6 @@ app.use("/api/v1/library", libraryRoutes);
 app.use("/api/v1/hostel", hostelRoutes);
 app.use("/api/v1/transport", transportRoutes);
 app.use("/api/v1/notices", noticeRoutes);
+app.use("/api/v1/events", eventRoutes);
 
 export default app;

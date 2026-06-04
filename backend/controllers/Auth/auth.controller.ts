@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
+import bcrypt from "bcrypt";
 import UserAccountService from "../../Services/Auth/UserAccount.ts";
+import UserAccount from "../../Models/Auth/UserAccount.ts";
 import Employee from "../../Models/HR/Employee.ts";
 import { ensureUserAccountForEmployee } from "../../Services/HR/Employee.service.ts";
 
@@ -90,6 +92,47 @@ export const loginController = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Login failed",
+    });
+  }
+};
+
+/* ── Change Password ─────────────────────────────────── */
+export const changePasswordController = async (req: Request, res: Response) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "userId, currentPassword and newPassword are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters",
+      });
+    }
+
+    const user = await UserAccount.findById(userId).select("+password");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error: unknown) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to change password",
     });
   }
 };
