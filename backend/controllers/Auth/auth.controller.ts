@@ -4,6 +4,8 @@ import UserAccountService from "../../Services/Auth/UserAccount.ts";
 import UserAccount from "../../Models/Auth/UserAccount.ts";
 import Employee from "../../Models/HR/Employee.ts";
 import { ensureUserAccountForEmployee } from "../../Services/HR/Employee.service.ts";
+import Student from "../../Models/Core/Student.ts";
+import { ensureUserAccountForStudent } from "../../Services/Core/Student.service.ts";
 
 const userAccountService = new UserAccountService();
 
@@ -16,6 +18,15 @@ const findEmployeeByIdentifier = (identifier: string) => {
 
   return Employee.findOne({
     $or: [{ email: normalizedEmail }, { employeeCode: normalizedCode }],
+  });
+};
+
+const findStudentByIdentifier = (identifier: string) => {
+  const normalizedEmail = identifier.toLowerCase();
+  const normalizedCode = identifier.toUpperCase();
+
+  return Student.findOne({
+    $or: [{ email: normalizedEmail }, { enrollmentNumber: normalizedCode }],
   });
 };
 
@@ -46,6 +57,18 @@ export const loginController = async (req: Request, res: Response) => {
           identifier,
           String(password)
         );
+      } else {
+        const student = await findStudentByIdentifier(identifier);
+        if (student) {
+          await ensureUserAccountForStudent(
+            String(student._id),
+            student.enrollmentNumber
+          );
+          user = await userAccountService.authenticate(
+            identifier,
+            String(password)
+          );
+        }
       }
     }
 
@@ -53,7 +76,7 @@ export const loginController = async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         message:
-          "Invalid login credentials. Use your employee code or email. Default password is your employee code.",
+          "Invalid login credentials. Use your employee code, enrollment number, or email. Default password is your code/enrollment number.",
       });
     }
 
@@ -64,13 +87,21 @@ export const loginController = async (req: Request, res: Response) => {
       });
     }
 
-    if (!user.employee) {
+    if (!user.employee && !user.student) {
       const linkedEmployee =
         (await findEmployeeByIdentifier(user.username)) ||
         (await findEmployeeByIdentifier(user.email));
       if (linkedEmployee) {
         await ensureUserAccountForEmployee(String(linkedEmployee._id));
         user = await userAccountService.getUserAccountById(String(user._id));
+      } else {
+        const linkedStudent =
+          (await findStudentByIdentifier(user.username)) ||
+          (await findStudentByIdentifier(user.email));
+        if (linkedStudent) {
+          await ensureUserAccountForStudent(String(linkedStudent._id));
+          user = await userAccountService.getUserAccountById(String(user._id));
+        }
       }
     }
 

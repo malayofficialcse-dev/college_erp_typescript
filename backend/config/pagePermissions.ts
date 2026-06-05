@@ -117,6 +117,16 @@ export const PAGE_PERMISSION_GROUPS: PagePermissionGroup[] = [
       { key: "reports", label: "Reports & Analytics", path: "/reports" },
     ],
   },
+  {
+    title: "Student Portal",
+    pages: [
+      { key: "student-portal-grades", label: "My Grades", path: "/student-portal/my-grades" },
+      { key: "student-portal-attendance", label: "My Attendance", path: "/student-portal/my-attendance" },
+      { key: "student-portal-fees", label: "My Fees", path: "/student-portal/my-fees" },
+      { key: "student-portal-timetable", label: "My Timetable", path: "/student-portal/my-timetable" },
+      { key: "student-portal-exams", label: "My Exams", path: "/student-portal/my-exams" },
+    ],
+  },
 ];
 
 export const ALL_PAGE_KEYS = PAGE_PERMISSION_GROUPS.flatMap((group) =>
@@ -163,6 +173,15 @@ const STAFF_CREATE_PAGES = new Set([
   "my-resignation",
 ]);
 
+const STUDENT_VIEW_PAGES = new Set([
+  "dashboard",
+  "student-portal-grades",
+  "student-portal-attendance",
+  "student-portal-fees",
+  "student-portal-timetable",
+  "student-portal-exams",
+]);
+
 const getDefaultPageAccess = (pageKey: string, roles: string[]) => {
   const isAdmin = roles.includes("ROLE_ADMIN");
   const isTeacher = roles.includes("ROLE_TEACHER");
@@ -190,6 +209,16 @@ const getDefaultPageAccess = (pageKey: string, roles: string[]) => {
       canView: STAFF_VIEW_PAGES.has(pageKey),
       canCreate: STAFF_CREATE_PAGES.has(pageKey),
       canEdit: STAFF_CREATE_PAGES.has(pageKey),
+      canDelete: false,
+    };
+  }
+
+  const isStudent = roles.includes("ROLE_STUDENT");
+  if (isStudent) {
+    return {
+      canView: STUDENT_VIEW_PAGES.has(pageKey),
+      canCreate: false,
+      canEdit: false,
       canDelete: false,
     };
   }
