@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Card, Table, Spinner, Alert, Badge, Row, Col, ProgressBar } from "react-bootstrap";
-import { AuthContext } from "../../../context/AuthContext";
-import { fetchMyStudentProfile } from "../../../services/studentSelfService";
-import api from "../../../services/api";
+import { AuthContext } from "../../context/AuthContext";
+import { fetchMyStudentProfile } from "../../services/studentSelfService";
+import api from "../../services/api";
 
 const MyAttendance = () => {
   const { user } = useContext(AuthContext);

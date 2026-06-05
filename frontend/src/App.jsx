@@ -62,7 +62,6 @@ import MyLeaves from './pages/EmployeeCentre/MyLeaves';
 import MyAttendanceEmp from './pages/EmployeeCentre/MyAttendance';
 import MyPayslips from './pages/EmployeeCentre/MyPayslips';
 import MyResignation from './pages/EmployeeCentre/MyResignation';
-
 // HR Inbox pages
 import HrLeaveInbox from './pages/HR/HrLeaveInbox';
 import HrResignationInbox from './pages/HR/HrResignationInbox';
@@ -137,7 +136,7 @@ function App() {
               {/* Employee Centre Routes */}
               <Route path="my-profile" element={<MyProfile />} />
               <Route path="my-leaves" element={<MyLeaves />} />
-              <Route path="my-attendance" element={<MyAttendance />} />
+              <Route path="my-attendance" element={<MyAttendanceEmp />} />
               <Route path="my-payslips" element={<MyPayslips />} />
               <Route path="my-resignation" element={<MyResignation />} />
 
