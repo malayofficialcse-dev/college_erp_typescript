@@ -37,7 +37,7 @@ const emptyForm = (fields) =>
     return form;
   }, {});
 
-const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = {}, filters = [] }) => {
+const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = {}, filters }) => {
   const [items, setItems] = useState([]);
   const [options, setOptions] = useState({});
   const [loading, setLoading] = useState(true);
@@ -47,11 +47,11 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
   const [isEdit, setIsEdit] = useState(false);
   const [current, setCurrent] = useState(() => emptyForm(fields));
   const [filterValues, setFilterValues] = useState(() =>
-    filters.reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {})
+    (filters || []).reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {})
   );
 
   const selectFields = useMemo(() => fields.filter((field) => field.type === 'select'), [fields]);
-  const activeFilters = useMemo(() => filters.filter((filter) => filter.type === 'select'), [filters]);
+  const activeFilters = useMemo(() => (filters || []).filter((filter) => filter.type === 'select'), [filters]);
 
   const fetchItems = async () => {
     try {
@@ -86,7 +86,7 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
   }, [endpoint]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    setFilterValues(filters.reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {}));
+    setFilterValues((filters || []).reduce((state, filter) => ({ ...state, [filter.name]: filter.defaultValue || '' }), {}));
   }, [filters]);
 
   const openAdd = () => {

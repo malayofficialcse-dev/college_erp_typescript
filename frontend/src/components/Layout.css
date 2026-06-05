@@ -28,6 +28,25 @@
   border-bottom: 1px solid var(--sidebar-border) !important;
 }
 
+.sidebar-heading {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.4rem;
+  margin-left: auto;
+}
+.sidebar-close-btn:hover {
+  color: var(--primary-color);
+}
+
 #sidebar-wrapper .list-group {
   width: 100%;
   padding: 1rem 0;

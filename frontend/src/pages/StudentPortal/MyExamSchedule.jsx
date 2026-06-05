@@ -72,11 +72,20 @@ const MyExamSchedule = () => {
                   
                   return (
                     <tr key={schedule._id || schedule.id}>
-                      <td className="px-4 fw-bold">{schedule.examName}</td>
-                      <td>{schedule.subject?.name} <span className="text-muted small">({schedule.subject?.code})</span></td>
+                          <td className="px-4 fw-bold">{schedule.examName}</td>
+                          <td>
+                            {(
+                              schedule.subject?.subjectName ||
+                              schedule.subject?.name ||
+                              schedule.subject?.subject ||
+                              schedule.subject?.subjectCode ||
+                              schedule.subject?.code
+                            ) || 'N/A'}
+                            <span className="text-muted small">({schedule.subject?.subjectCode || schedule.subject?.code || ''})</span>
+                          </td>
                       <td>{examDate.toLocaleDateString()}</td>
                       <td>{schedule.startTime} - {schedule.endTime}</td>
-                      <td>{schedule.roomNumber || '—'}</td>
+                      <td>{schedule.classroom?.roomNumber || schedule.roomNumber || '—'}</td>
                       <td className="text-end px-4">
                         <Badge bg={isPast ? 'secondary' : 'primary'}>
                           {isPast ? 'COMPLETED' : 'UPCOMING'}

@@ -14,6 +14,12 @@ const ExamSchedules = () => (
     }}
     fields={[
       { name: 'examName', label: 'Exam Name' },
+      { name: 'examType', label: 'Exam Type', type: 'select', optionsList: [
+        { value: 'MID_TERM', label: 'MID_TERM' },
+        { value: 'FINAL', label: 'FINAL' },
+        { value: 'PRACTICAL', label: 'PRACTICAL' },
+        { value: 'VIVA', label: 'VIVA' },
+      ], defaultValue: 'MID_TERM' },
       { name: 'course', label: 'Course', type: 'select', options: 'courses' },
       { name: 'semester', label: 'Semester', type: 'select', options: 'semesters' },
       { name: 'subject', label: 'Subject', type: 'select', options: 'subjects' },

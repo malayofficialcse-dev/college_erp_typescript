@@ -103,11 +103,20 @@ export const getStudentExamSchedule = async (req: Request, res: Response) => {
       return res.status(200).json({ success: true, data: [] });
     }
 
-    // Exam schedules might be linked by course and semester
-    const schedules = await ExamSchedule.find({
-      course: student.course,
-      semester: student.currentSemester,
-    }).populate("subject", "name code");
+    // Exam schedules might be linked by course and semester (either by semester ObjectId or semester number)
+    const query: Record<string, any> = { course: student.course };
+    if (student.currentSemester !== undefined && student.currentSemester !== null) {
+      // If currentSemester is a number use semesterNumber field, otherwise assume it's an ObjectId and use semester
+      if (typeof student.currentSemester === 'number') {
+        query.semesterNumber = student.currentSemester;
+      } else {
+        query.semester = student.currentSemester;
+      }
+    }
+
+    const schedules = await ExamSchedule.find(query)
+      .populate("subject", "subjectName subjectCode name code")
+      .populate("classroom", "roomNumber building");
 
     res.status(200).json({ success: true, data: schedules });
   } catch (error: any) {
