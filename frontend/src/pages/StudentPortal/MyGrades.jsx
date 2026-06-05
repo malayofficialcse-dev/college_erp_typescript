@@ -3,6 +3,7 @@ import { Card, Table, Spinner, Alert, Badge } from "react-bootstrap";
 import { AuthContext } from "../../context/AuthContext";
 import { fetchMyStudentProfile } from "../../services/studentSelfService";
 import api from "../../services/api";
+import StudentPortalHeader from "../../components/StudentPortalHeader";
 
 const MyGrades = () => {
   const { user } = useContext(AuthContext);
@@ -50,6 +51,7 @@ const MyGrades = () => {
   return (
     <div className="container-fluid py-3">
       <h2 className="fw-bold mb-4">My Grades</h2>
+      <StudentPortalHeader student={student} />
       
       {grades.length === 0 ? (
         <Card className="border-0 shadow-sm">

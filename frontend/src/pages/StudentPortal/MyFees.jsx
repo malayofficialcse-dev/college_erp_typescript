@@ -3,6 +3,7 @@ import { Card, Table, Spinner, Alert, Badge, Button } from "react-bootstrap";
 import { AuthContext } from "../../context/AuthContext";
 import { fetchMyStudentProfile } from "../../services/studentSelfService";
 import api from "../../services/api";
+import StudentPortalHeader from "../../components/StudentPortalHeader";
 
 const MyFees = () => {
   const { user } = useContext(AuthContext);
@@ -43,6 +44,7 @@ const MyFees = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="fw-bold mb-0">My Fees</h2>
       </div>
+      <StudentPortalHeader student={student} />
 
       {fees.length === 0 ? (
         <Card className="border-0 shadow-sm">

@@ -1,5 +1,12 @@
 import Student from "../../Models/Core/Student.ts";
+import UserAccount from "../../Models/Auth/UserAccount.ts";
 import type { StudentStatus } from "../../Interfaces/Core/index.ts";
+import UserAccountService from "../Auth/UserAccount.ts";
+import { seedDefaultPermissions } from "../Auth/UserPermission.service.ts";
+
+const userAccountService = new UserAccountService();
+
+const mapStudentRoles = (): string[] => ["ROLE_STUDENT"];
 
 export interface ICreateStudentInput {
   enrollmentNumber: string;
@@ -19,6 +26,67 @@ export interface ICreateStudentInput {
   currentSemester: number;
   status?: StudentStatus;
 }
+
+export const ensureUserAccountForStudent = async (
+  studentId: string,
+  password?: string
+) => {
+  const student = await Student.findById(studentId);
+  if (!student) {
+    throw new Error("Student not found");
+  }
+
+  const initialPassword = password ?? student.enrollmentNumber;
+  const fullName = `${student.firstName} ${student.lastName}`;
+  const roles = mapStudentRoles();
+  const email = student.email.toLowerCase().trim();
+  const username = student.enrollmentNumber.toUpperCase().trim();
+
+  const userAccount = await UserAccount.findOne({ student: student._id });
+  const existingAccount =
+    userAccount ||
+    (await UserAccount.findOne({
+      $or: [{ email }, { username }],
+    }));
+
+  if (existingAccount) {
+    await userAccountService.updateUserAccount(String(existingAccount._id), {
+      username,
+      email,
+      fullName,
+      roles,
+      enabled: true,
+      student: student._id,
+      ...(password ? { password } : {}),
+    });
+
+    await seedDefaultPermissions(String(existingAccount._id), roles);
+
+    return {
+      userAccount: await UserAccount.findById(existingAccount._id).select("-password"),
+      tempPassword: password ?? null,
+      created: false,
+    };
+  }
+
+  const createdAccount = await userAccountService.createUserAccount({
+    username,
+    email,
+    password: initialPassword,
+    fullName,
+    roles,
+    enabled: true,
+    student: student._id,
+  });
+
+  await seedDefaultPermissions(String(createdAccount._id), roles);
+
+  return {
+    userAccount: createdAccount,
+    tempPassword: initialPassword,
+    created: true,
+  };
+};
 
 export const createStudentService = async (data: ICreateStudentInput) => {
   const existing = await Student.findOne({

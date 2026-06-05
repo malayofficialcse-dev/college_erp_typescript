@@ -7,6 +7,10 @@ const PageAccessGuard = ({ pageKey, action = 'view', children }) => {
   const { hasPermission } = useContext(AuthContext);
   const pageLabel = PAGE_BY_KEY[pageKey]?.label || pageKey;
 
+  if (PAGE_BY_KEY[pageKey]?.alwaysVisible) {
+    return children;
+  }
+
   if (!hasPermission(pageKey, action)) {
     return (
       <div className="container-fluid mt-4">
