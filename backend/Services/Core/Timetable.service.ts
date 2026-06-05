@@ -1,4 +1,5 @@
 import Timetable from "../../Models/Core/Timetable.ts";
+import Section from "../../Models/Core/Section.ts";
 import type { DayOfWeek } from "../../Interfaces/Core/index.ts";
 
 export interface ICreateTimetableInput {
@@ -15,7 +16,17 @@ export interface ICreateTimetableInput {
 }
 
 export const createTimetableService = async (data: ICreateTimetableInput) => {
-  return Timetable.create(data);
+  const payload: any = { ...data };
+  if (!payload.course && payload.section) {
+    try {
+      const sectionDoc = await Section.findById(payload.section).select("course");
+      if (sectionDoc && sectionDoc.course) payload.course = sectionDoc.course;
+    } catch (err) {
+      // ignore and let validation handle missing course
+    }
+  }
+
+  return Timetable.create(payload);
 };
 
 export const getAllTimetablesService = async (filter: {

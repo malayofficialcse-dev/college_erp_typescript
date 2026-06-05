@@ -112,6 +112,7 @@ export const getUserStudentController = async (req: Request, res: Response) => {
         { path: "department", select: "name code" },
         { path: "course", select: "name code" },
         { path: "section", select: "name" },
+        { path: "academicYear", select: "name" },
       ],
     });
 

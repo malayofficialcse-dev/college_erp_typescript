@@ -17,19 +17,19 @@ const StudentPortalHeader = ({ student }) => {
           <Row className="g-2" style={{ minWidth: 240 }}>
             <Col xs={12} md={6}>
               <div className="text-muted small">Department</div>
-              <div>{student.department?.name || 'N/A'}</div>
+              <div>{student.department?.name || student.department || 'N/A'}</div>
             </Col>
             <Col xs={12} md={6}>
               <div className="text-muted small">Course</div>
-              <div>{student.course?.name || 'N/A'}</div>
+              <div>{student.course?.name || student.course || 'N/A'}</div>
             </Col>
             <Col xs={12} md={6}>
               <div className="text-muted small">Section</div>
-              <div>{student.section?.name || 'N/A'}</div>
+              <div>{student.section?.name || student.section || 'N/A'}</div>
             </Col>
             <Col xs={12} md={6}>
               <div className="text-muted small">Academic Year</div>
-              <div>{student.academicYear?.name || 'N/A'}</div>
+              <div>{student.academicYear?.name || student.academicYear || 'N/A'}</div>
             </Col>
           </Row>
         </div>
