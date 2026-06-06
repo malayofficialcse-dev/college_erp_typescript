@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PageAccessGuard from './components/PageAccessGuard';
 import Layout from './components/Layout';
+import ERPLoading from './components/ERPLoading';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Employees from './pages/HR/Employees';
@@ -67,6 +68,17 @@ import HrLeaveInbox from './pages/HR/HrLeaveInbox';
 import HrResignationInbox from './pages/HR/HrResignationInbox';
 
 function App() {
+  const [showLoading, setShowLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoading(false), 2400);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showLoading) {
+    return <ERPLoading />;
+  }
+
   return (
     <Router>
       <ThemeProvider>
