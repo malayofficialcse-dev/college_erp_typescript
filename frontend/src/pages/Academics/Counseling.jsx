@@ -3,6 +3,7 @@ import { Table, Button, Modal, Form, Row, Col, Pagination, Badge, Card, Spinner,
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import { exportToExcel, importFromExcel, validateCounselingData, downloadTemplate } from '../../utils/excelUtils';
 
 const Counseling = () => {
   const navigate = useNavigate();
@@ -33,6 +34,14 @@ const Counseling = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const { hasPermission } = useContext(AuthContext);
+
+  // Import/Export States
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importData, setImportData] = useState([]);
+  const [importErrors, setImportErrors] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
 
   useEffect(() => {
     // We assume academics view permission gives access to counseling
@@ -154,6 +163,140 @@ const Counseling = () => {
     navigate('/admissions', { state: { counselingData: counseling } });
   };
 
+  const handleExportExcel = () => {
+    try {
+      const exportData = counselings.map(item => ({
+        firstName: item.firstName,
+        lastName: item.lastName,
+        email: item.email,
+        phone: item.phone,
+        gender: item.gender || '',
+        dateOfBirth: item.dateOfBirth || '',
+        previousQualification: item.previousQualification || '',
+        desiredCourse: item.desiredCourse?.title || item.desiredCourse?.name || '',
+        counselorName: item.counselorName || '',
+        remarks: item.remarks || '',
+        status: item.status
+      }));
+      
+      exportToExcel(exportData, `Counseling_Records_${new Date().toISOString().split('T')[0]}.xlsx`);
+      setAlert({ type: 'success', msg: 'Data exported successfully!' });
+    } catch (error) {
+      console.error('Export error:', error);
+      setAlert({ type: 'danger', msg: 'Failed to export data. Please ensure the xlsx library is installed.' });
+    }
+  };
+
+  const handleImportClick = () => {
+    setImportFile(null);
+    setImportData([]);
+    setImportErrors([]);
+    setImportProgress(0);
+    setShowImportModal(true);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setAlert({ type: 'danger', msg: 'Please select a valid Excel or CSV file.' });
+      return;
+    }
+
+    setImportFile(file);
+    
+    try {
+      setImportLoading(true);
+      const data = await importFromExcel(file);
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        setAlert({ type: 'warning', msg: 'The file appears to be empty.' });
+        setImportFile(null);
+        return;
+      }
+
+      const { validated, errors } = validateCounselingData(data);
+      setImportData(validated);
+      setImportErrors(errors);
+
+      if (errors.length > 0) {
+        setAlert({ 
+          type: 'warning', 
+          msg: `File loaded with ${errors.length} validation error(s). ${validated.length} valid record(s) ready to import.`
+        });
+      } else {
+        setAlert({ 
+          type: 'success', 
+          msg: `File loaded successfully! ${validated.length} record(s) ready to import.`
+        });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      setAlert({ type: 'danger', msg: error.message || 'Failed to read file. Please ensure it is a valid Excel file.' });
+      setImportFile(null);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportData = async () => {
+    if (importData.length === 0) {
+      setAlert({ type: 'danger', msg: 'No valid data to import.' });
+      return;
+    }
+
+    try {
+      setImportLoading(true);
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (let i = 0; i < importData.length; i++) {
+        try {
+          const record = importData[i];
+          const payload = {
+            firstName: record.firstName,
+            lastName: record.lastName,
+            email: record.email,
+            phone: record.phone,
+            gender: record.gender || 'Male',
+            dateOfBirth: record.dateOfBirth || '',
+            previousQualification: record.previousQualification || '',
+            desiredCourse: record.desiredCourse || '',
+            counselorName: record.counselorName || '',
+            remarks: record.remarks || '',
+            status: record.status || 'PENDING'
+          };
+
+          await api.post('/counseling', payload);
+          successCount++;
+          setImportProgress(((i + 1) / importData.length) * 100);
+        } catch (error) {
+          failureCount++;
+          console.error('Error importing record:', error);
+        }
+      }
+
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportData([]);
+      setImportErrors([]);
+      setImportProgress(0);
+
+      await fetchCounselings();
+
+      setAlert({
+        type: successCount > 0 ? 'success' : 'danger',
+        msg: `Import completed! ${successCount} record(s) imported successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}.`
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      setAlert({ type: 'danger', msg: 'Failed to import data.' });
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   if (!hasPermission('counseling', 'view')) {
     return (
       <div className="container-fluid mt-4">
@@ -172,11 +315,26 @@ const Counseling = () => {
           <h2 className="text-dark fw-bold mb-0">Counseling Desk</h2>
           <p className="text-muted small mb-0">Manage prospective students and admission inquiries</p>
         </div>
-        {hasPermission('counseling', 'create') && (
-          <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => handleOpenModal()}>
-            <i className="bi bi-plus-circle-fill me-2"></i>New Inquiry
-          </Button>
-        )}
+        <div className="d-flex gap-2">
+          {hasPermission('counseling', 'view') && (
+            <>
+              <Button variant="outline-secondary" className="rounded-pill px-3 shadow-sm" onClick={() => downloadTemplate()}>
+                <i className="bi bi-download me-2"></i>Template
+              </Button>
+              <Button variant="outline-success" className="rounded-pill px-3 shadow-sm" onClick={handleExportExcel}>
+                <i className="bi bi-file-earmark-excel me-2"></i>Export
+              </Button>
+              <Button variant="outline-info" className="rounded-pill px-3 shadow-sm" onClick={handleImportClick}>
+                <i className="bi bi-upload me-2"></i>Import
+              </Button>
+            </>
+          )}
+          {hasPermission('counseling', 'create') && (
+            <Button variant="primary" className="rounded-pill px-4 shadow-sm" onClick={() => handleOpenModal()}>
+              <i className="bi bi-plus-circle-fill me-2"></i>New Inquiry
+            </Button>
+          )}
+        </div>
       </div>
 
       {alert && <Alert variant={alert.type} dismissible onClose={() => setAlert(null)}>{alert.msg}</Alert>}
@@ -384,6 +542,149 @@ const Counseling = () => {
             </Button>
           </Modal.Footer>
         </Form>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal show={showImportModal} onHide={() => !importLoading && setShowImportModal(false)} size="lg" centered>
+        <Modal.Header closeButton={!importLoading} className="bg-light border-0">
+          <Modal.Title className="fw-bold">
+            <i className="bi bi-upload me-2 text-info"></i>
+            {importFile ? 'Review & Import Data' : 'Import Counseling Records'}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="px-4 py-4">
+          {!importFile ? (
+            <div>
+              <Form.Group className="mb-3">
+                <Form.Label className="small fw-bold text-muted mb-3 d-block">
+                  Select Excel File (.xlsx, .xls, .csv)
+                </Form.Label>
+                <div className="border-2 border-dashed rounded-3 p-4 text-center" style={{ borderColor: '#dee2e6' }}>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleFileSelect}
+                    disabled={importLoading}
+                    style={{ display: 'none' }}
+                    id="import-file-input"
+                  />
+                  <label htmlFor="import-file-input" style={{ cursor: 'pointer', marginBottom: '1rem', display: 'block' }}>
+                    <i className="bi bi-cloud-arrow-up fs-3 text-info mb-2 d-block"></i>
+                    <div className="fw-semibold text-dark">Click to select file or drag & drop</div>
+                    <div className="small text-muted">Supported formats: Excel (.xlsx, .xls), CSV</div>
+                  </label>
+                </div>
+              </Form.Group>
+              <Alert variant="info" className="small mb-0">
+                <strong>Tip:</strong> Download the template to see the required format and column names.
+              </Alert>
+            </div>
+          ) : (
+            <div>
+              <div className="alert alert-info small mb-3">
+                <strong>File:</strong> {importFile.name}
+              </div>
+
+              {importErrors.length > 0 && (
+                <div className="alert alert-warning mb-3">
+                  <strong>Validation Issues ({importErrors.length}):</strong>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', marginTop: '0.5rem' }}>
+                    {importErrors.map((error, idx) => (
+                      <div key={idx} className="small text-dark mb-2">
+                        <strong>Row {error.row}:</strong> {error.errors.join(', ')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {importData.length > 0 && (
+                <div className="alert alert-success small mb-3">
+                  <strong>{importData.length} valid record(s) ready to import</strong>
+                </div>
+              )}
+
+              {importLoading && (
+                <div className="mb-3">
+                  <div className="small text-muted mb-2">Importing records... {Math.round(importProgress)}%</div>
+                  <div className="progress" style={{ height: '5px' }}>
+                    <div
+                      className="progress-bar bg-success"
+                      style={{ width: `${importProgress}%`, transition: 'width 0.3s ease' }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {!importLoading && importData.length > 0 && (
+                <div className="small text-muted">
+                  Preview of data to be imported:
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', marginTop: '0.5rem' }}>
+                    <table className="table table-sm table-bordered mb-0" style={{ fontSize: '0.75rem' }}>
+                      <thead className="table-light">
+                        <tr>
+                          <th>First Name</th>
+                          <th>Last Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importData.slice(0, 5).map((item, idx) => (
+                          <tr key={idx}>
+                            <td>{item.firstName}</td>
+                            <td>{item.lastName}</td>
+                            <td>{item.email}</td>
+                            <td>{item.phone}</td>
+                            <td>{item.status}</td>
+                          </tr>
+                        ))}
+                        {importData.length > 5 && (
+                          <tr>
+                            <td colSpan="5" className="text-center text-muted">
+                              ... and {importData.length - 5} more records
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="border-0 bg-light">
+          {!importFile ? (
+            <Button variant="secondary" className="rounded-pill px-4" onClick={() => setShowImportModal(false)}>
+              Cancel
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="light" 
+                className="rounded-pill px-4" 
+                onClick={() => {
+                  setImportFile(null);
+                  setImportData([]);
+                  setImportErrors([]);
+                }}
+                disabled={importLoading}
+              >
+                Select Different File
+              </Button>
+              <Button
+                variant="success"
+                className="rounded-pill px-4 shadow-sm"
+                onClick={handleImportData}
+                disabled={importLoading || importData.length === 0}
+              >
+                {importLoading ? 'Importing...' : `Import ${importData.length} Record${importData.length !== 1 ? 's' : ''}`}
+              </Button>
+            </>
+          )}
+        </Modal.Footer>
       </Modal>
     </div>
   );

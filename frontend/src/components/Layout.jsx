@@ -306,16 +306,10 @@ const Layout = () => {
         <Navbar expand="lg" className="top-navbar shadow-sm sticky-top">
           <Container fluid className="px-3">
             <div className="d-flex align-items-center flex-grow-1">
-              <button className="btn btn-light border-0 me-3 d-md-none" onClick={toggleSidebar}>
+              {/* Hamburger button - always visible */}
+              <button className="btn btn-light border-0 me-3" onClick={toggleSidebar} aria-label="Toggle sidebar">
                 <i className="bi bi-list fs-4"></i>
               </button>
-
-              {/* Desktop open button shown when sidebar is closed */}
-              {!isSidebarToggled && (
-                <button aria-label="Open sidebar" className="btn btn-light border-0 me-3 d-none d-md-inline-flex" onClick={toggleSidebar}>
-                  <i className="bi bi-list fs-4"></i>
-                </button>
-              )}
               
               {/* Breadcrumbs and Page Title */}
               <div className="d-none d-md-block me-4">
@@ -328,11 +322,8 @@ const Layout = () => {
                 <h5 className="mb-0 fw-bold text-dark">{getPageTitle()}</h5>
               </div>
 
-              {/* Global Search Bar */}
-              <div className="header-search ms-3 d-none d-lg-block flex-grow-1">
-                <i className="bi bi-search"></i>
-                <Form.Control type="text" placeholder="Search students, staff, reports..." />
-              </div>
+              
+              
             </div>
 
             <div className="d-flex align-items-center ms-auto">
