@@ -77,6 +77,8 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = (pageKey, action) => {
     if (!user) return false;
     if (user.roles?.includes('ROLE_ADMIN')) return true;
+    if (PAGE_BY_KEY[pageKey]?.alwaysVisible) return true;
+    if (user.roles?.includes('ROLE_STUDENT') && pageKey?.startsWith('student-portal')) return true;
 
     const permission = permissions.find((item) => item.moduleName === pageKey);
     if (!permission) return false;

@@ -232,6 +232,14 @@ const Layout = () => {
         <div className="sidebar-heading">
           <i className="bi bi-hexagon-fill me-2 text-primary"></i>
           ERP Pro
+          <button
+            aria-label="Close sidebar"
+            className="btn btn-sm sidebar-close-btn d-none d-md-inline-flex"
+            onClick={toggleSidebar}
+            style={{ marginLeft: 'auto' }}
+          >
+            <i className="bi bi-x-lg" style={{ fontSize: '0.9rem' }}></i>
+          </button>
         </div>
         <div className="list-group list-group-flush mt-2">
           {filteredNavCategories.map((category, index) => {
@@ -301,6 +309,13 @@ const Layout = () => {
               <button className="btn btn-light border-0 me-3 d-md-none" onClick={toggleSidebar}>
                 <i className="bi bi-list fs-4"></i>
               </button>
+
+              {/* Desktop open button shown when sidebar is closed */}
+              {!isSidebarToggled && (
+                <button aria-label="Open sidebar" className="btn btn-light border-0 me-3 d-none d-md-inline-flex" onClick={toggleSidebar}>
+                  <i className="bi bi-list fs-4"></i>
+                </button>
+              )}
               
               {/* Breadcrumbs and Page Title */}
               <div className="d-none d-md-block me-4">

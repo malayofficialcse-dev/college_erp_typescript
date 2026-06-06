@@ -3,6 +3,7 @@ import { Card, Table, Spinner, Alert, Badge, Row, Col, ProgressBar } from "react
 import { AuthContext } from "../../context/AuthContext";
 import { fetchMyStudentProfile } from "../../services/studentSelfService";
 import api from "../../services/api";
+import StudentPortalHeader from "../../components/StudentPortalHeader";
 
 const MyAttendance = () => {
   const { user } = useContext(AuthContext);
@@ -54,6 +55,7 @@ const MyAttendance = () => {
   return (
     <div className="container-fluid py-3">
       <h2 className="fw-bold mb-4">My Attendance</h2>
+      <StudentPortalHeader student={student} />
 
       <Row className="g-4 mb-4">
         <Col md={12} lg={4}>

@@ -1,10 +1,12 @@
 import Student from "../../Models/Core/Student.ts";
-import type { StudentStatus } from "../../Interfaces/Core/index.ts";
 import UserAccount from "../../Models/Auth/UserAccount.ts";
+import type { StudentStatus } from "../../Interfaces/Core/index.ts";
 import UserAccountService from "../Auth/UserAccount.ts";
 import { seedDefaultPermissions } from "../Auth/UserPermission.service.ts";
 
 const userAccountService = new UserAccountService();
+
+const mapStudentRoles = (): string[] => ["ROLE_STUDENT"];
 
 export interface ICreateStudentInput {
   enrollmentNumber: string;
@@ -25,16 +27,6 @@ export interface ICreateStudentInput {
   status?: StudentStatus;
 }
 
-export const createStudentService = async (data: ICreateStudentInput) => {
-  const existing = await Student.findOne({
-    $or: [{ enrollmentNumber: data.enrollmentNumber }, { email: data.email }],
-  });
-  if (existing) {
-    throw new Error("Student with same enrollment number or email already exists");
-  }
-  return Student.create(data);
-};
-
 export const ensureUserAccountForStudent = async (
   studentId: string,
   password?: string
@@ -46,12 +38,11 @@ export const ensureUserAccountForStudent = async (
 
   const initialPassword = password ?? student.enrollmentNumber;
   const fullName = `${student.firstName} ${student.lastName}`;
-  const roles = ["ROLE_STUDENT"];
+  const roles = mapStudentRoles();
   const email = student.email.toLowerCase().trim();
   const username = student.enrollmentNumber.toUpperCase().trim();
 
   const userAccount = await UserAccount.findOne({ student: student._id });
-
   const existingAccount =
     userAccount ||
     (await UserAccount.findOne({
@@ -95,6 +86,16 @@ export const ensureUserAccountForStudent = async (
     tempPassword: initialPassword,
     created: true,
   };
+};
+
+export const createStudentService = async (data: ICreateStudentInput) => {
+  const existing = await Student.findOne({
+    $or: [{ enrollmentNumber: data.enrollmentNumber }, { email: data.email }],
+  });
+  if (existing) {
+    throw new Error("Student with same enrollment number or email already exists");
+  }
+  return Student.create(data);
 };
 
 export const getAllStudentsService = async (filter: {

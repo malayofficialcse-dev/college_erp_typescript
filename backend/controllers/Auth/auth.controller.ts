@@ -3,8 +3,8 @@ import bcrypt from "bcrypt";
 import UserAccountService from "../../Services/Auth/UserAccount.ts";
 import UserAccount from "../../Models/Auth/UserAccount.ts";
 import Employee from "../../Models/HR/Employee.ts";
-import { ensureUserAccountForEmployee } from "../../Services/HR/Employee.service.ts";
 import Student from "../../Models/Core/Student.ts";
+import { ensureUserAccountForEmployee } from "../../Services/HR/Employee.service.ts";
 import { ensureUserAccountForStudent } from "../../Services/Core/Student.service.ts";
 
 const userAccountService = new UserAccountService();
@@ -23,10 +23,10 @@ const findEmployeeByIdentifier = (identifier: string) => {
 
 const findStudentByIdentifier = (identifier: string) => {
   const normalizedEmail = identifier.toLowerCase();
-  const normalizedCode = identifier.toUpperCase();
+  const normalizedEnrollment = identifier.toUpperCase();
 
   return Student.findOne({
-    $or: [{ email: normalizedEmail }, { enrollmentNumber: normalizedCode }],
+    $or: [{ email: normalizedEmail }, { enrollmentNumber: normalizedEnrollment }],
   });
 };
 
@@ -73,6 +73,17 @@ export const loginController = async (req: Request, res: Response) => {
     }
 
     if (!user) {
+      const student = await findStudentByIdentifier(identifier);
+      if (student) {
+        await ensureUserAccountForStudent(
+          String(student._id),
+          student.enrollmentNumber
+        );
+        user = await userAccountService.authenticate(identifier, String(password));
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         message:
@@ -102,6 +113,16 @@ export const loginController = async (req: Request, res: Response) => {
           await ensureUserAccountForStudent(String(linkedStudent._id));
           user = await userAccountService.getUserAccountById(String(user._id));
         }
+      }
+    }
+
+    if (!user.student) {
+      const linkedStudent =
+        (await findStudentByIdentifier(user.username)) ||
+        (await findStudentByIdentifier(user.email));
+      if (linkedStudent) {
+        await ensureUserAccountForStudent(String(linkedStudent._id));
+        user = await userAccountService.getUserAccountById(String(user._id));
       }
     }
 

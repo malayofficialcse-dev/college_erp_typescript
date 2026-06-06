@@ -34,15 +34,18 @@ const Login = () => {
               {error && <Alert variant="danger">{error}</Alert>}
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Employee Code or Email</Form.Label>
+                  <Form.Label>Email or Student Enrollment / Employee Code</Form.Label>
                   <Form.Control 
                     type="text" 
-                    placeholder="EMP26053000001 or name@college.edu.in" 
+                    placeholder="name@college.edu or ENR123456" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required 
                   />
                 </Form.Group>
+                <div className="text-muted small mb-3">
+                  Students can log in with their email and enrollment number as password.
+                </div>
                 <Form.Group className="mb-4">
                   <Form.Label>Password</Form.Label>
                   <Form.Control 

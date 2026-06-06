@@ -5,6 +5,8 @@ import FeeInvoice from "../../Models/Finance/FeeInvoice.ts";
 import Timetable from "../../Models/Core/Timetable.ts";
 import ExamSchedule from "../../Models/Core/ExamSchedule.ts";
 import Student from "../../Models/Core/Student.ts";
+import Admission from "../../Models/Core/Admission.ts";
+import AdmissionEmi from "../../Models/Core/AdmissionEmi.ts";
 
 export const getStudentGrades = async (req: Request, res: Response) => {
   try {
@@ -36,11 +38,39 @@ export const getStudentAttendance = async (req: Request, res: Response) => {
 export const getStudentFees = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-    const invoices = await FeeInvoice.find({ student: studentId }).sort({
-      dueDate: -1,
-    });
+    const invoices = await FeeInvoice.find({ student: studentId }).sort({ dueDate: -1 });
 
-    res.status(200).json({ success: true, data: invoices });
+    if (invoices.length > 0) {
+      return res.status(200).json({ success: true, data: invoices });
+    }
+
+    const admissions = await Admission.find({ student: studentId }).select("_id admissionNumber");
+    if (admissions.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const admissionIds = admissions.map((admission) => admission._id);
+    const emis = await AdmissionEmi.find({ admission: { $in: admissionIds } })
+      .populate("admission", "admissionNumber")
+      .sort({ emiNumber: 1, dueDate: -1 });
+
+    const emiRecords = emis.map((emi) => ({
+      _id: emi._id,
+      invoiceNumber: emi.admission?.admissionNumber
+        ? `${String(emi.admission.admissionNumber)}-EMI${emi.emiNumber}`
+        : `EMI-${emi.emiNumber}`,
+      description: `EMI installment ${emi.emiNumber}`,
+      dueDate: emi.dueDate,
+      totalAmount: emi.emiAmount,
+      paidAmount: emi.paidAmount || 0,
+      status: emi.status,
+      remarks: emi.remarks,
+      paymentMethod: emi.paymentMethod,
+      source: "EMI",
+      emiNumber: emi.emiNumber,
+    }));
+
+    res.status(200).json({ success: true, data: emiRecords });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -73,11 +103,20 @@ export const getStudentExamSchedule = async (req: Request, res: Response) => {
       return res.status(200).json({ success: true, data: [] });
     }
 
-    // Exam schedules might be linked by course and semester
-    const schedules = await ExamSchedule.find({
-      course: student.course,
-      semester: student.currentSemester,
-    }).populate("subject", "name code");
+    // Exam schedules might be linked by course and semester (either by semester ObjectId or semester number)
+    const query: Record<string, any> = { course: student.course };
+    if (student.currentSemester !== undefined && student.currentSemester !== null) {
+      // If currentSemester is a number use semesterNumber field, otherwise assume it's an ObjectId and use semester
+      if (typeof student.currentSemester === 'number') {
+        query.semesterNumber = student.currentSemester;
+      } else {
+        query.semester = student.currentSemester;
+      }
+    }
+
+    const schedules = await ExamSchedule.find(query)
+      .populate("subject", "subjectName subjectCode name code")
+      .populate("classroom", "roomNumber building");
 
     res.status(200).json({ success: true, data: schedules });
   } catch (error: any) {
