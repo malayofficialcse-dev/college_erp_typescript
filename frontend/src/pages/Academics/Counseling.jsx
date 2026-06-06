@@ -250,10 +250,23 @@ const Counseling = () => {
       setImportLoading(true);
       let successCount = 0;
       let failureCount = 0;
+      const failures = [];
 
       for (let i = 0; i < importData.length; i++) {
         try {
           const record = importData[i];
+          // Map desiredCourse (name/code) to course id if possible
+          let desiredCourseId;
+          if (record.desiredCourse) {
+            const needle = record.desiredCourse.toString().trim().toLowerCase();
+            const match = courses.find(c => {
+              const title = (c.title || c.name || '').toString().toLowerCase();
+              const code = (c.code || c.courseCode || '').toString().toLowerCase();
+              return (title && title === needle) || (code && code === needle);
+            });
+            if (match) desiredCourseId = match.id || match._id || match._id?.toString();
+          }
+
           const payload = {
             firstName: record.firstName,
             lastName: record.lastName,
@@ -262,7 +275,7 @@ const Counseling = () => {
             gender: record.gender || 'Male',
             dateOfBirth: record.dateOfBirth || '',
             previousQualification: record.previousQualification || '',
-            desiredCourse: record.desiredCourse || '',
+            desiredCourse: desiredCourseId || undefined,
             counselorName: record.counselorName || '',
             remarks: record.remarks || '',
             status: record.status || 'PENDING'
@@ -273,7 +286,10 @@ const Counseling = () => {
           setImportProgress(((i + 1) / importData.length) * 100);
         } catch (error) {
           failureCount++;
-          console.error('Error importing record:', error);
+          const serverMsg = error?.response?.data || error.message || String(error);
+          failures.push({ row: i + 2, error: serverMsg });
+          // Log detailed server error when available
+          console.error('Error importing record (row ' + (i + 2) + '):', serverMsg);
         }
       }
 
@@ -285,10 +301,15 @@ const Counseling = () => {
 
       await fetchCounselings();
 
+      const alertMsg = `Import completed! ${successCount} record(s) imported successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}.`;
       setAlert({
-        type: successCount > 0 ? 'success' : 'danger',
-        msg: `Import completed! ${successCount} record(s) imported successfully${failureCount > 0 ? `, ${failureCount} failed` : ''}.`
+        type: failureCount === 0 ? 'success' : successCount > 0 ? 'warning' : 'danger',
+        msg: alertMsg
       });
+
+      if (failures.length > 0) {
+        console.table(failures);
+      }
     } catch (error) {
       console.error('Import error:', error);
       setAlert({ type: 'danger', msg: 'Failed to import data.' });
