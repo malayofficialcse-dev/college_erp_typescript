@@ -12,6 +12,7 @@ const Layout = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [isSidebarToggled, setSidebarToggled] = useState(false);
+  const isStudent = user?.roles?.includes('ROLE_STUDENT');
 
   const toggleSidebar = () => setSidebarToggled(!isSidebarToggled);
 
@@ -340,11 +341,17 @@ const Layout = () => {
                   <span className="d-none d-md-inline">Quick Actions</span>
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="shadow border-0 mt-2" style={{ borderRadius: 'var(--radius-md)' }}>
-                  <Dropdown.Header className="fw-bold">Create New</Dropdown.Header>
-                  <Dropdown.Item as={Link} to="/students"><i className="bi bi-mortarboard me-2"></i>New Student</Dropdown.Item>
-                  <Dropdown.Item as={Link} to="/employees"><i className="bi bi-person-badge me-2"></i>New Staff Onboarding</Dropdown.Item>
-                  <Dropdown.Item as={Link} to="/notices"><i className="bi bi-megaphone me-2"></i>Post Notice</Dropdown.Item>
-                  <Dropdown.Item as={Link} to="/leaves"><i className="bi bi-calendar2-x me-2"></i>Apply Leave</Dropdown.Item>
+                  <Dropdown.Header className="fw-bold">{isStudent ? 'Notices' : 'Create New'}</Dropdown.Header>
+                  {isStudent ? (
+                    <Dropdown.Item as={Link} to="/notices"><i className="bi bi-megaphone me-2"></i>Notices</Dropdown.Item>
+                  ) : (
+                    <>
+                      <Dropdown.Item as={Link} to="/students"><i className="bi bi-mortarboard me-2"></i>New Student</Dropdown.Item>
+                      <Dropdown.Item as={Link} to="/employees"><i className="bi bi-person-badge me-2"></i>New Staff Onboarding</Dropdown.Item>
+                      <Dropdown.Item as={Link} to="/notices"><i className="bi bi-megaphone me-2"></i>Post Notice</Dropdown.Item>
+                      <Dropdown.Item as={Link} to="/leaves"><i className="bi bi-calendar2-x me-2"></i>Apply Leave</Dropdown.Item>
+                    </>
+                  )}
                 </Dropdown.Menu>
               </Dropdown>
 

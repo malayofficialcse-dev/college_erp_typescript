@@ -24,7 +24,12 @@ const Notices = () => {
   const fetchNotices = async () => {
     try {
       const response = await api.get('/notices');
-      setNotices(response.data.content || response.data);
+      const data = response.data.content || response.data;
+      if (isStudent) {
+        setNotices(data.filter((notice) => notice.targetAudience === 'ALL' || notice.targetAudience === 'STUDENTS'));
+      } else {
+        setNotices(data);
+      }
     } catch (error) {
       console.error('Error fetching notices:', error);
     }
