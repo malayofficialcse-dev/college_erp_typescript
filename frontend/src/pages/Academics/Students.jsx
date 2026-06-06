@@ -245,7 +245,23 @@ const Students = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form, department: form.departmentId ? { id: form.departmentId } : null };
+      // Build payload matching backend model expectations
+      const payload = {
+        enrollmentNumber: form.enrollmentNumber,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone || undefined,
+        gender: form.gender || undefined,
+        dateOfBirth: form.dateOfBirth ? new Date(form.dateOfBirth) : undefined,
+        guardianName: form.guardianName || undefined,
+        guardianPhone: form.guardianPhone || undefined,
+        address: form.address || undefined,
+        currentSemester: form.currentSemester ? Number(form.currentSemester) : undefined,
+        department: form.departmentId || undefined,
+        status: form.status || undefined,
+      };
+
       if (isEdit) await api.put(`/students/${form.id || form._id}`, payload);
       else        await api.post('/students', payload);
       setShowModal(false);

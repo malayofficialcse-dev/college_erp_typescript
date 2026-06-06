@@ -142,7 +142,16 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
       setShowModal(false);
       fetchItems();
     } catch (err) {
-      setError(err.response?.data?.message || err.message || `Unable to save ${title.toLowerCase()}.`);
+      // Log full error for debugging
+      console.error('Save error:', err.response?.data || err);
+      // Prefer structured server message if available
+      const serverData = err.response?.data;
+      let userMessage = err.message || `Unable to save ${title.toLowerCase()}.`;
+      if (serverData) {
+        if (serverData.message) userMessage = serverData.message;
+        else userMessage = JSON.stringify(serverData);
+      }
+      setError(userMessage);
     } finally {
       setSaving(false);
     }

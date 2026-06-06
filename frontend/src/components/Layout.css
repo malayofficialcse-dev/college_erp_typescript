@@ -148,6 +148,21 @@
   background-color: var(--bg-color);
 }
 
+/* Dark theme: ensure table row hover contrasts and text remains visible */
+[data-theme="dark"] table.table tbody tr:hover,
+[data-theme="dark"] table.table-hover tbody tr:hover {
+  background-color: rgba(255,255,255,0.03) !important;
+}
+
+[data-theme="dark"] table.table tbody tr:hover td,
+[data-theme="dark"] table.table-hover tbody tr:hover td {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .table thead th {
+  color: rgba(255,255,255,0.85);
+}
+
 .top-navbar {
   background: var(--surface-color) !important;
   border-bottom: 1px solid var(--border-color) !important;

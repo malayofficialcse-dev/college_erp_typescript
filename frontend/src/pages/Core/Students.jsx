@@ -16,7 +16,7 @@ const Students = () => (
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'phone', label: 'Phone Number' },
       { name: 'gender', label: 'Gender', type: 'select', optionsList: [{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }] },
-      { name: 'dateOfBirth', label: 'Date of Birth', type: 'date', optional: true },
+      { name: 'dateOfBirth', label: 'Date of Birth', type: 'date' },
       { name: 'guardianName', label: 'Guardian Name', optional: true },
       { name: 'guardianPhone', label: 'Guardian Phone', optional: true },
       { name: 'address', label: 'Address', optional: true },
