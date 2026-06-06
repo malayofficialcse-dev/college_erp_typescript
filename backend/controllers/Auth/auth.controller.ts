@@ -84,10 +84,21 @@ export const loginController = async (req: Request, res: Response) => {
     }
 
     if (!user) {
+      const student = await findStudentByIdentifier(identifier);
+      if (student) {
+        await ensureUserAccountForStudent(
+          String(student._id),
+          student.enrollmentNumber
+        );
+        user = await userAccountService.authenticate(identifier, String(password));
+      }
+    }
+
+    if (!user) {
       return res.status(401).json({
         success: false,
         message:
-          "Invalid login credentials. Use your employee code, enrollment number, or email. Default password is your code/enrollment number.",
+          "Invalid login credentials. Use your employee or student email/code. For students, the default password is the enrollment number.",
       });
     }
 
@@ -113,6 +124,16 @@ export const loginController = async (req: Request, res: Response) => {
           await ensureUserAccountForStudent(String(linkedStudent._id));
           user = await userAccountService.getUserAccountById(String(user._id));
         }
+      }
+    }
+
+    if (!user.student) {
+      const linkedStudent =
+        (await findStudentByIdentifier(user.username)) ||
+        (await findStudentByIdentifier(user.email));
+      if (linkedStudent) {
+        await ensureUserAccountForStudent(String(linkedStudent._id));
+        user = await userAccountService.getUserAccountById(String(user._id));
       }
     }
 
