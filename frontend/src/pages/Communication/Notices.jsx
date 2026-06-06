@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Table, Button, Modal, Form, Badge, Row, Col } from 'react-bootstrap';
 import api from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
 
 const Notices = () => {
+  const { user } = useContext(AuthContext);
+  const isStudent = user?.roles?.includes('ROLE_STUDENT');
+
   const [notices, setNotices] = useState([]);
   const [departments, setDepartments] = useState([]);
   
@@ -90,9 +94,11 @@ const Notices = () => {
     <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="text-dark fw-bold mb-0">Notice Board</h2>
-        <Button variant="primary" onClick={handleOpenAdd}>
-          <i className="bi bi-plus-lg me-2"></i>Create Notice
-        </Button>
+        {!isStudent && (
+          <Button variant="primary" onClick={handleOpenAdd}>
+            <i className="bi bi-plus-lg me-2"></i>Create Notice
+          </Button>
+        )}
       </div>
 
       <div className="card border-0 shadow-sm">
@@ -121,12 +127,18 @@ const Notices = () => {
                     </Badge>
                   </td>
                   <td className="text-end px-4">
-                    <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(notice)}>
-                      <i className="bi bi-pencil"></i>
-                    </Button>
-                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(notice.id)}>
-                      <i className="bi bi-trash"></i>
-                    </Button>
+                    {!isStudent ? (
+                      <>
+                        <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(notice)}>
+                          <i className="bi bi-pencil"></i>
+                        </Button>
+                        <Button variant="outline-danger" size="sm" onClick={() => handleDelete(notice.id)}>
+                          <i className="bi bi-trash"></i>
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="text-muted small">View only</span>
+                    )}
                   </td>
                 </tr>
               ))}
