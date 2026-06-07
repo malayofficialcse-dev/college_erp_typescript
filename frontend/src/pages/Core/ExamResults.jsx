@@ -7,9 +7,9 @@ const ExamResults = () => (
     endpoint="/exam-results"
     icon="bi-award-fill"
     relations={{
-      students: { endpoint: '/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'] },
-      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
-      examSchedules: { endpoint: '/exam-schedules', labelPaths: ['examName'] },
+      students: { endpoint: '/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'], filterByDepartment: true },
+      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'], filterByDepartment: true },
+      examSchedules: { endpoint: '/exam-schedules', labelPaths: ['examName'], filterByDepartment: true },
     }}
     fields={[
       { name: 'student', label: 'Student', type: 'select', options: 'students' },

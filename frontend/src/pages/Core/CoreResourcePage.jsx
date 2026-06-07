@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Col, Form, Modal, Row, Spinner, Table } from 'react-bootstrap';
 import api from '../../services/api';
+import useDepartmentScope from '../../hooks/useDepartmentScope';
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const getId = (item) => item?.id || item?._id || '';
@@ -189,6 +190,8 @@ const MultiSelectDropdown = ({ label, options: opts, selected, onChange, labelPa
    CoreResourcePage
 ═══════════════════════════════════════════════════════════════════════════ */
 const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = {}, filters }) => {
+  const { departmentId, departmentName, isAdmin } = useDepartmentScope();
+
   const [items, setItems]         = useState([]);
   const [options, setOptions]     = useState({});
   const [loading, setLoading]     = useState(true);
@@ -221,7 +224,12 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     try {
       setError('');
       setLoading(true);
-      const response = await api.get(endpoint);
+      let url = endpoint;
+      if (departmentId) {
+        const joiner = url.includes('?') ? '&' : '?';
+        url = `${url}${joiner}department=${departmentId}`;
+      }
+      const response = await api.get(url);
       setItems(asArray(response.data));
     } catch (err) {
       setError(err.response?.data?.message || err.message || `Unable to load ${title.toLowerCase()}.`);
@@ -234,7 +242,13 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     const entries = await Promise.all(
       Object.entries(relations).map(async ([key, config]) => {
         try {
-          const response = await api.get(config.endpoint);
+          let url = config.endpoint;
+          // Only filter relation endpoint by department if configured to do so
+          if (departmentId && config.filterByDepartment) {
+            const joiner = url.includes('?') ? '&' : '?';
+            url = `${url}${joiner}department=${departmentId}`;
+          }
+          const response = await api.get(url);
           return [key, asArray(response.data)];
         } catch {
           return [key, []];
@@ -247,10 +261,21 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
   useEffect(() => {
     fetchItems();
     if (selectFields.length) fetchOptions();
-  }, [endpoint]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpoint, departmentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── form helpers ─────────────────────────────────────────────────────── */
-  const openAdd = () => { setIsEdit(false); setCurrent(emptyForm(fields)); setShowModal(true); };
+  const openAdd = () => {
+    setIsEdit(false);
+    const form = emptyForm(fields);
+    if (departmentId) {
+      const deptField = fields.find((f) => f.name === 'department');
+      if (deptField) {
+        form[deptField.name] = departmentId;
+      }
+    }
+    setCurrent(form);
+    setShowModal(true);
+  };
 
   const openEdit = (item) => {
     const form = emptyForm(fields);
@@ -266,6 +291,12 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
       }
     });
     form.id = getId(item);
+    if (departmentId) {
+      const deptField = fields.find((f) => f.name === 'department');
+      if (deptField) {
+        form[deptField.name] = departmentId;
+      }
+    }
     setIsEdit(true);
     setCurrent(form);
     setShowModal(true);
@@ -276,8 +307,8 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
     setCurrent((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const buildPayload = () =>
-    fields.reduce((payload, field) => {
+  const buildPayload = () => {
+    const payload = fields.reduce((payload, field) => {
       const value = current[field.name];
       if (field.optional && (value === '' || value === null || value === undefined)) return payload;
       const key = field.payloadKey ?? field.name;
@@ -286,6 +317,16 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
       else payload[key] = value;
       return payload;
     }, {});
+    
+    // Inject department if scoped
+    if (departmentId) {
+      const deptField = fields.find((f) => f.name === 'department');
+      if (deptField) {
+        payload[deptField.payloadKey ?? 'department'] = departmentId;
+      }
+    }
+    return payload;
+  };
 
   const saveItem = async (e) => {
     e.preventDefault();
@@ -415,7 +456,14 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="fw-bold mb-0">{title}</h2>
+        <div className="d-flex align-items-center gap-3">
+          <h2 className="fw-bold mb-0">{title}</h2>
+          {departmentName && (
+            <Badge bg="info" className="align-self-center py-2 px-3" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+              Department: {departmentName}
+            </Badge>
+          )}
+        </div>
         <Button variant="primary" onClick={openAdd}>
           <i className={`bi ${icon || 'bi-plus-lg'} me-2`}></i>Add
         </Button>
@@ -640,7 +688,13 @@ const CoreResourcePage = ({ title, endpoint, icon, fields, columns, relations = 
                   <Form.Group>
                     {field.type !== 'checkbox' && <Form.Label>{field.label}</Form.Label>}
                     {field.type === 'select' ? (
-                      <Form.Select name={field.name} value={current[field.name]} onChange={handleChange} required={!field.optional}>
+                      <Form.Select 
+                        name={field.name} 
+                        value={current[field.name]} 
+                        onChange={handleChange} 
+                        required={!field.optional}
+                        disabled={field.name === 'department' && !!departmentId}
+                      >
                         <option value="">{field.placeholder || `Select ${field.label}`}</option>
                         {(field.optionsList || options[field.options] || []).map((option) => (
                           <option key={getId(option) || option.value} value={getId(option) || option.value}>

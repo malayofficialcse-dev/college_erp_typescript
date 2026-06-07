@@ -6,34 +6,65 @@ import { getPageKeyFromPath, PAGE_BY_KEY } from '../config/pagePermissions';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]             = useState(null);
   const [permissions, setPermissions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
   const navigate = useNavigate();
 
   const fetchPermissions = async (userId) => {
     const id = userId || user?.id;
-    if (!id) {
-      setPermissions([]);
-      return;
-    }
-
+    if (!id) { setPermissions([]); return; }
     try {
       const response = await api.get(`/users/${id}/permissions`);
       setPermissions(response.data);
     } catch (error) {
-      console.error("Failed to fetch permissions", error);
+      console.error('Failed to fetch permissions', error);
       setPermissions([]);
     }
   };
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
+  /* ── resolve department for employee accounts ──────────────────────── */
+  const resolveDepartment = async (userId, roles) => {
+    // Admins are unrestricted — no dept scoping
+    if (roles?.includes('ROLE_ADMIN')) return { departmentId: null, departmentName: null };
+    // Students already have dept in their student profile, resolved elsewhere
+    if (roles?.includes('ROLE_STUDENT')) return { departmentId: null, departmentName: null };
+
+    try {
+      const res = await api.get(`/users/${userId}/employee`);
+      const employee = res.data?.data || res.data;
+      if (employee?.department) {
+        const dept = employee.department;
+        return {
+          departmentId:   dept._id || dept.id || null,
+          departmentName: dept.name || null,
+        };
+      }
+    } catch {
+      // no employee profile linked — unrestricted fallback
     }
-    setLoading(false);
+    return { departmentId: null, departmentName: null };
+  };
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const storedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      if (storedUser && token) {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        try {
+          const { departmentId, departmentName } = await resolveDepartment(parsed.id, parsed.roles);
+          const updatedUser = { ...parsed, departmentId, departmentName };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        } catch (err) {
+          console.error("Failed to restore department scope", err);
+        }
+      }
+      setLoading(false);
+    };
+    restoreSession();
   }, []);
 
   useEffect(() => {
@@ -44,24 +75,35 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  /* ── login ─────────────────────────────────────────────────────────── */
   const login = async (username, password) => {
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { accessToken, id, email, roles } = response.data; // Adapting to JwtResponse structure
+      const { id, email, roles } = response.data;
       const token = response.data.accessToken || response.data.token;
-      if (!token) {
-         console.warn("No token returned from backend!");
-      }
+      if (!token) console.warn('No token returned from backend!');
+
       localStorage.setItem('token', token);
-      const userData = { username: response.data.username, id, email, roles };
+
+      // Resolve department scope right after login
+      const { departmentId, departmentName } = await resolveDepartment(id, roles);
+
+      const userData = {
+        username: response.data.username,
+        id,
+        email,
+        roles,
+        departmentId,
+        departmentName,
+      };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       navigate('/dashboard');
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Login failed' 
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Login failed',
       };
     }
   };
@@ -83,13 +125,7 @@ export const AuthProvider = ({ children }) => {
     const permission = permissions.find((item) => item.moduleName === pageKey);
     if (!permission) return false;
 
-    const actionMap = {
-      view: 'canView',
-      create: 'canCreate',
-      edit: 'canEdit',
-      delete: 'canDelete',
-    };
-
+    const actionMap = { view: 'canView', create: 'canCreate', edit: 'canEdit', delete: 'canDelete' };
     return !!permission[actionMap[action]];
   };
 

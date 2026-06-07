@@ -29,12 +29,12 @@ export const bulkMarkAttendance = async (req: Request, res: Response) => {
 
 export const getAllAttendance = async (req: Request, res: Response) => {
   try {
-    const { student, subject, status, date } = req.query as Record<string, string>;
+    const { student, subject, status, date, department } = req.query as Record<string, string>;
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
     
     const parsedDate = date ? new Date(date) : undefined;
-    const attendance = await getAllAttendanceService({ student, subject, status, date: parsedDate, month, year });
+    const attendance = await getAllAttendanceService({ student, subject, status, date: parsedDate, month, year, department });
     res.status(200).json({ success: true, count: attendance.length, data: attendance });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

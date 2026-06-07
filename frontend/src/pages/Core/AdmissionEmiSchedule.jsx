@@ -7,7 +7,7 @@ const AdmissionEmiSchedule = () => (
     endpoint="/admission-emi"
     icon="bi-calendar-check-fill"
     relations={{
-      admissions: { endpoint: '/admissions', labelPaths: ['id', 'firstName', 'lastName'] },
+      admissions: { endpoint: '/admissions', labelPaths: ['id', 'firstName', 'lastName'], filterByDepartment: true },
     }}
     fields={[
       { name: 'admission', label: 'Admission', type: 'select', options: 'admissions' },

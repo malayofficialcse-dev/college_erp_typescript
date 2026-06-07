@@ -37,9 +37,17 @@ export const getAllAttendanceService = async (filter: {
   date?: Date;
   month?: number;
   year?: number;
+  department?: string;
 }) => {
   const query: Record<string, unknown> = {};
-  if (filter.student) query.student = filter.student;
+  if (filter.student) {
+    query.student = filter.student;
+  } else if (filter.department) {
+    const StudentModel = (await import("../../Models/Core/Student.ts")).default;
+    const students = await StudentModel.find({ department: filter.department }).select("_id");
+    const studentIds = students.map(s => s._id);
+    query.student = { $in: studentIds };
+  }
   if (filter.subject) query.subject = filter.subject;
   if (filter.status) query.status = filter.status;
 

@@ -37,11 +37,15 @@ export const createSubjectService = async (data: Record<string, unknown>) => {
 export const getAllSubjectsService = async (filters?: {
   keyword?: string;
   courseId?: string;
+  department?: string;
 }) => {
   const query: Record<string, unknown> = {};
 
   if (filters?.courseId) {
     query.course = filters.courseId;
+  }
+  if (filters?.department) {
+    query.department = filters.department;
   }
   if (filters?.keyword) {
     const keyword = filters.keyword;

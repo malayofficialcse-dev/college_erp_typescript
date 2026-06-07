@@ -7,8 +7,8 @@ const Attendance = () => (
     endpoint="/attendance"
     icon="bi-calendar-check-fill"
     relations={{
-      students: { endpoint: '/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'] },
-      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
+      students: { endpoint: '/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'], filterByDepartment: true },
+      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'], filterByDepartment: true },
     }}
     fields={[
       { name: 'student', label: 'Student', type: 'select', options: 'students' },

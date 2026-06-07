@@ -7,11 +7,11 @@ const Sections = () => (
     endpoint="/sections"
     icon="bi-diagram-3"
     relations={{
-      departments: { endpoint: '/departments', labelPaths: ['code', 'name'] },
-      courses: { endpoint: '/courses', labelPaths: ['code', 'name'] },
+      departments: { endpoint: '/departments', labelPaths: ['code', 'name'], filterByDepartment: true },
+      courses: { endpoint: '/courses', labelPaths: ['code', 'name'], filterByDepartment: true },
       semesters: { endpoint: '/semesters', labelPaths: ['name', 'semesterNumber'] },
       academicYears: { endpoint: '/academic-years', labelPaths: ['name'] },
-      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'] },
+      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'], filterByDepartment: true },
     }}
     fields={[
       { name: 'name', label: 'Section Name' },

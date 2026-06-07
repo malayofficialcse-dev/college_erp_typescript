@@ -7,7 +7,7 @@ const Students = () => (
     endpoint="/students"
     icon="bi-person-badge-fill"
     relations={{
-      departments: { endpoint: '/departments', labelPaths: ['name'] },
+      departments: { endpoint: '/departments', labelPaths: ['name'], filterByDepartment: true },
     }}
     fields={[
       { name: 'enrollmentNumber', label: 'Enrollment Number' },

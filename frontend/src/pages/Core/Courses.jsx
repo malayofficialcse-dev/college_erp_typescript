@@ -7,7 +7,7 @@ const Courses = () => (
     endpoint="/courses"
     icon="bi-journal-bookmark-fill"
     relations={{
-      departments: { endpoint: '/departments', labelPaths: ['name'] },
+      departments: { endpoint: '/departments', labelPaths: ['name'], filterByDepartment: true },
     }}
     fields={[
       { name: 'code', label: 'Course Code' },

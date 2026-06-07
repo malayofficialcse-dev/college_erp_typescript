@@ -7,7 +7,7 @@ const Teachers = () => (
     endpoint="/teachers"
     icon="bi-person-workspace"
     relations={{
-      departments: { endpoint: '/departments', labelPaths: ['name'] },
+      departments: { endpoint: '/departments', labelPaths: ['name'], filterByDepartment: true },
     }}
     fields={[
       { name: 'employeeCode', label: 'Employee Code' },

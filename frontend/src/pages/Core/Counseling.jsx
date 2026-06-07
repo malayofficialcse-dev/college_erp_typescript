@@ -7,8 +7,8 @@ const Counseling = () => (
     endpoint="/core/counseling"
     icon="bi-headset"
     relations={{
-      students: { endpoint: '/core/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'] },
-      teachers: { endpoint: '/core/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'] },
+      students: { endpoint: '/core/students', labelPaths: ['enrollmentNumber', 'firstName', 'lastName'], filterByDepartment: true },
+      teachers: { endpoint: '/core/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'], filterByDepartment: true },
     }}
     fields={[
       { name: 'student', label: 'Student', type: 'select', options: 'students' },

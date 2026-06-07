@@ -7,9 +7,9 @@ const ExamSchedules = () => (
     endpoint="/exam-schedules"
     icon="bi-calendar-event"
     relations={{
-      courses: { endpoint: '/courses', labelPaths: ['code', 'name'] },
+      courses: { endpoint: '/courses', labelPaths: ['code', 'name'], filterByDepartment: true },
       semesters: { endpoint: '/semesters', labelPaths: ['name', 'semesterNumber'] },
-      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
+      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'], filterByDepartment: true },
       academicYears: { endpoint: '/academic-years', labelPaths: ['name'] },
     }}
     fields={[

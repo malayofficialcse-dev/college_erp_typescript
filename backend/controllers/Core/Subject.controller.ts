@@ -34,8 +34,10 @@ export const getAllSubjects = async (req: Request, res: Response) => {
       typeof req.query.keyword === "string" ? req.query.keyword : undefined;
     const courseId =
       typeof req.query.courseId === "string" ? req.query.courseId : undefined;
+    const department =
+      typeof req.query.department === "string" ? req.query.department : undefined;
 
-    const subjects = await getAllSubjectsService({ keyword, courseId });
+    const subjects = await getAllSubjectsService({ keyword, courseId, department });
     res
       .status(200)
       .json({ success: true, count: subjects.length, data: subjects });
@@ -53,10 +55,12 @@ export const searchSubjects = async (req: Request, res: Response) => {
       typeof req.query.keyword === "string" ? req.query.keyword : undefined;
     const courseId =
       typeof req.query.courseId === "string" ? req.query.courseId : undefined;
+    const department =
+      typeof req.query.department === "string" ? req.query.department : undefined;
     const page = Number(req.query.page ?? 0);
     const size = Number(req.query.size ?? 10);
 
-    const subjects = await getAllSubjectsService({ keyword, courseId });
+    const subjects = await getAllSubjectsService({ keyword, courseId, department });
     const start = page * size;
     const content = subjects.slice(start, start + size);
 

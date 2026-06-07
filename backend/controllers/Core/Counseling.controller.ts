@@ -20,8 +20,8 @@ export const createCounseling = async (req: Request, res: Response) => {
 
 export const getAllCounselings = async (req: Request, res: Response) => {
   try {
-    const { status, desiredCourse } = req.query as Record<string, string>;
-    const counselings = await getAllCounselingsService({ status, desiredCourse });
+    const { status, desiredCourse, department } = req.query as Record<string, string>;
+    const counselings = await getAllCounselingsService({ status, desiredCourse, department });
     res.status(200).json({ success: true, count: counselings.length, data: counselings });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

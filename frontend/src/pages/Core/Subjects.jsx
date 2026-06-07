@@ -7,7 +7,7 @@ const Subjects = () => (
     endpoint="/subjects"
     icon="bi-book-half"
     relations={{
-      courses: { endpoint: '/courses', labelPaths: ['code', 'name'] },
+      courses: { endpoint: '/courses', labelPaths: ['code', 'name'], filterByDepartment: true },
       semesters: { endpoint: '/semesters', labelPaths: ['name', 'semesterNumber'] },
     }}
     fields={[

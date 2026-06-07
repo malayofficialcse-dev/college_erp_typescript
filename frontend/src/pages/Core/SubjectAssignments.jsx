@@ -10,11 +10,11 @@ const SubjectAssignments = () => (
     endpoint="/subject-assignments"
     icon="bi-person-lines-fill"
     relations={{
-      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'] },
-      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
-      courses: { endpoint: '/courses', labelPaths: ['code', 'name'] },
+      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'], filterByDepartment: true },
+      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'], filterByDepartment: true },
+      courses: { endpoint: '/courses', labelPaths: ['code', 'name'], filterByDepartment: true },
       semesters: { endpoint: '/semesters', labelPaths: ['name', 'semesterNumber'] },
-      sections: { endpoint: '/sections', labelPaths: ['code', 'name'] },
+      sections: { endpoint: '/sections', labelPaths: ['code', 'name'], filterByDepartment: true },
       academicYears: { endpoint: '/academic-years', labelPaths: ['name'] },
     }}
     fields={[

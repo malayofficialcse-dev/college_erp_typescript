@@ -24,10 +24,18 @@ export const createCounselingService = async (
 export const getAllCounselingsService = async (filter: {
   status?: string;
   desiredCourse?: string;
+  department?: string;
 }) => {
   const query: Record<string, unknown> = {};
   if (filter.status) query.status = filter.status;
-  if (filter.desiredCourse) query.desiredCourse = filter.desiredCourse;
+  if (filter.desiredCourse) {
+    query.desiredCourse = filter.desiredCourse;
+  } else if (filter.department) {
+    const CourseModel = (await import("../../Models/Core/Courses.ts")).default;
+    const courses = await CourseModel.find({ department: filter.department }).select("_id");
+    const courseIds = courses.map(c => c._id);
+    query.desiredCourse = { $in: courseIds };
+  }
 
   return Counseling.find(query)
     .populate("desiredCourse", "name code")

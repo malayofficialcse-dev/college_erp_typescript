@@ -17,10 +17,10 @@ const Timetable = () => (
     endpoint="/timetables"
     icon="bi-calendar3"
     relations={{
-      departments: { endpoint: '/departments', labelPaths: ['code', 'name'] },
-      sections: { endpoint: '/sections', labelPaths: ['code', 'name'] },
-      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'] },
-      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'] },
+      departments: { endpoint: '/departments', labelPaths: ['code', 'name'], filterByDepartment: true },
+      sections: { endpoint: '/sections', labelPaths: ['code', 'name'], filterByDepartment: true },
+      subjects: { endpoint: '/subjects', labelPaths: ['subjectCode', 'subjectName'], filterByDepartment: true },
+      teachers: { endpoint: '/teachers', labelPaths: ['employeeCode', 'firstName', 'lastName'], filterByDepartment: true },
       classrooms: { endpoint: '/classrooms', labelPaths: ['roomNumber', 'building'] },
     }}
     filters={[

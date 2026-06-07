@@ -7,7 +7,7 @@ const Admissions = () => (
     endpoint="/core/admissions"
     icon="bi-mortarboard-fill"
     relations={{
-      courses: { endpoint: '/courses', labelPaths: ['code', 'name'] },
+      courses: { endpoint: '/courses', labelPaths: ['code', 'name'], filterByDepartment: true },
       academicYears: { endpoint: '/academic-years', labelPaths: ['name'] },
     }}
     fields={[
