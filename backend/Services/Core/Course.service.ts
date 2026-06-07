@@ -10,8 +10,9 @@ export const createCourseService = async (data: Record<string, unknown>) => {
   return Course.create(data);
 };
 
-export const getAllCoursesService = async () => {
-  return Course.find().populate("department", "name code");
+export const getAllCoursesService = async (filter?: { department?: string }) => {
+  const query = filter?.department ? { department: filter.department } : {};
+  return Course.find(query).populate("department", "name code");
 };
 
 export const getCourseByIdService = async (id: string) => {

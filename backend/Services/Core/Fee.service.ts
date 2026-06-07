@@ -1,4 +1,5 @@
 import Fee from "../../Models/Finance/Fee.ts";
+import Student from "../../Models/Core/Student.ts";
 import type { IFee } from "../../Interfaces/Finance/Fee.ts";
 
 export interface ICreateFeeInput {
@@ -66,12 +67,17 @@ export const searchFeesService = async (filter: {
   feeType?: string;
   paymentMethod?: string;
   source?: string;
+  department?: string;
   size?: number;
   page?: number;
 }) => {
   const query: Record<string, unknown> = {};
 
   if (filter.studentId) query.student = filter.studentId;
+  if (filter.department && !filter.studentId) {
+    const students = await Student.find({ department: filter.department }).select("_id");
+    query.student = { $in: students.map((student) => student._id) };
+  }
   if (filter.status) query.status = filter.status;
   if (filter.semester) query.semester = parseInt(filter.semester);
   if (filter.feeType) query.feeType = filter.feeType;

@@ -63,6 +63,25 @@ const normalizeApiUrl = (url = '') => {
   return query ? `${normalizedPath}?${query}` : normalizedPath;
 };
 
+const shouldApplyDepartmentScope = (config) => {
+  const method = (config.method || 'get').toLowerCase();
+  if (method !== 'get') return false;
+
+  const path = (config.url || '').split('?')[0];
+  return !path.startsWith('/auth') && !path.includes('/student-portal');
+};
+
+const appendDepartmentScope = (url = '', departmentId) => {
+  if (!departmentId) return url;
+
+  const [path, query = ''] = url.split('?');
+  const params = new URLSearchParams(query);
+  params.set('department', departmentId);
+  params.set('departmentId', departmentId);
+  const nextQuery = params.toString();
+  return nextQuery ? `${path}?${nextQuery}` : path;
+};
+
 const normalizeDocumentIds = (value) => {
   if (Array.isArray(value)) return value.map(normalizeDocumentIds);
   if (!value || typeof value !== 'object') return value;
@@ -85,6 +104,15 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      const isAdmin = storedUser?.roles?.includes('ROLE_ADMIN');
+      if (!isAdmin && storedUser?.departmentId && shouldApplyDepartmentScope(config)) {
+        config.url = appendDepartmentScope(config.url, storedUser.departmentId);
+      }
+    } catch {
+      // Ignore malformed session data; backend still enforces scope from token.
     }
     return config;
   },

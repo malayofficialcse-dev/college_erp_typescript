@@ -18,8 +18,9 @@ export const findDepartmentByIdService = async (id: string) => {
   return Department.findById(id);
 };
 
-export const getAllDepartmentService = async () => {
-  return Department.find();
+export const getAllDepartmentService = async (filter?: { department?: string }) => {
+  const query = filter?.department ? { _id: filter.department } : {};
+  return Department.find(query);
 };
 
 export const updateDepartmentService = async (

@@ -10,6 +10,7 @@ const userAccountSchema = new Schema<IUserAccount>(
     fullName: { type: String, required: true, trim: true },
     roles: { type: [String], default: ["ROLE_STAFF"] },
     enabled: { type: Boolean, default: true },
+    department: { type: Schema.Types.ObjectId, ref: "Department" },
     employee: { type: Schema.Types.ObjectId, ref: "Employee" },
     student: { type: Schema.Types.ObjectId, ref: "Student" },
   },

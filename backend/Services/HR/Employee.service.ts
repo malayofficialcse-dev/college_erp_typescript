@@ -74,6 +74,7 @@ export const ensureUserAccountForEmployee = async (
       fullName,
       roles,
       enabled: true,
+      department: employee.department,
       employee: employee._id,
       ...(password ? { password } : {}),
     });
@@ -94,6 +95,7 @@ export const ensureUserAccountForEmployee = async (
     fullName,
     roles,
     enabled: true,
+    department: employee.department,
     employee: employee._id,
   });
 

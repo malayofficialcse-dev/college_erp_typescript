@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import FeeInvoice from "../../Models/Finance/FeeInvoice.ts";
 import InvoicePayment from "../../Models/Finance/InvoicePayment.ts";
+import Student from "../../Models/Core/Student.ts";
 import { createFeeRecordService } from "../../Services/Core/Fee.service.ts";
 
 const getInvoiceStatus = (totalAmount: number, paidAmount: number) => {
@@ -11,9 +12,13 @@ const getInvoiceStatus = (totalAmount: number, paidAmount: number) => {
 
 export const getInvoices = async (req: Request, res: Response) => {
   try {
-    const { status, keyword } = req.query as Record<string, string>;
+    const { status, keyword, department } = req.query as Record<string, string>;
     const query: Record<string, unknown> = {};
     if (status) query.status = status;
+    if (department) {
+      const students = await Student.find({ department }).select("_id");
+      query.student = { $in: students.map((student) => student._id) };
+    }
     if (keyword) {
       query.$or = [
         { invoiceNumber: { $regex: keyword, $options: "i" } },

@@ -99,16 +99,20 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('token', token);
 
-      // Resolve department scope right after login
-      const { departmentId, departmentName } = await resolveDepartment(id, roles);
+      const departmentScope = response.data.departmentId
+        ? {
+            departmentId: response.data.departmentId,
+            departmentName: response.data.departmentName || null,
+          }
+        : await resolveDepartment(id, roles);
 
       const userData = {
         username: response.data.username,
         id,
         email,
         roles,
-        departmentId,
-        departmentName,
+        departmentId: departmentScope.departmentId,
+        departmentName: departmentScope.departmentName,
       };
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);

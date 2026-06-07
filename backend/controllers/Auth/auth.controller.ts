@@ -12,6 +12,17 @@ const userAccountService = new UserAccountService();
 const createAccessToken = (userId: string) =>
   Buffer.from(`${userId}:${Date.now()}`).toString("base64url");
 
+const getDepartmentPayload = (department: any) => {
+  if (!department) return { departmentId: null, departmentName: null };
+  if (typeof department === "string") {
+    return { departmentId: department, departmentName: null };
+  }
+  return {
+    departmentId: department._id?.toString?.() || department.id || null,
+    departmentName: department.name || null,
+  };
+};
+
 const findEmployeeByIdentifier = (identifier: string) => {
   const normalizedEmail = identifier.toLowerCase();
   const normalizedCode = identifier.toUpperCase();
@@ -147,6 +158,30 @@ export const loginController = async (req: Request, res: Response) => {
       }
     }
 
+    user = await UserAccount.findById(user._id)
+      .select("-password")
+      .populate("department", "name code")
+      .populate({
+        path: "employee",
+        populate: { path: "department", select: "name code" },
+      })
+      .populate({
+        path: "student",
+        populate: { path: "department", select: "name code" },
+      });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid login session. Please try again.",
+      });
+    }
+
+    const scopedDepartment =
+      getDepartmentPayload(user.department).departmentId
+        ? getDepartmentPayload(user.department)
+        : getDepartmentPayload((user.employee as any)?.department || (user.student as any)?.department);
+
     const accessToken = createAccessToken(String(user._id));
 
     res.status(200).json({
@@ -159,6 +194,8 @@ export const loginController = async (req: Request, res: Response) => {
         email: user.email,
         fullName: user.fullName,
         roles: user.roles,
+        departmentId: user.roles?.includes("ROLE_ADMIN") ? null : scopedDepartment.departmentId,
+        departmentName: user.roles?.includes("ROLE_ADMIN") ? null : scopedDepartment.departmentName,
       },
     });
   } catch (error: unknown) {

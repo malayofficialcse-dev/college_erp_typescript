@@ -112,7 +112,9 @@ export const updateDepartmentById = async (req: Request, res: Response) => {
 
 export const getAllDepartments = async (req:Request,res:Response) => {
     try {
-        const departments = await getAllDepartmentService();
+        const department =
+            typeof req.query.department === "string" ? req.query.department : undefined;
+        const departments = await getAllDepartmentService({ department });
         if(!departments) {
             return res.status(404).json({
                 message:"Departments not found"

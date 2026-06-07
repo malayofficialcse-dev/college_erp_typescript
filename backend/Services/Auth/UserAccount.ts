@@ -3,6 +3,7 @@ import mongoose, { Types } from "mongoose";
 import type { IUserAccount } from "../../Interfaces/Auth/UserAccount.ts";
 import UserAccount from "../../Models/Auth/UserAccount.ts";
 import Employee from "../../Models/HR/Employee.ts";
+import Student from "../../Models/Core/Student.ts";
 
 type CreateUserAccountData = {
   username: string;
@@ -11,6 +12,7 @@ type CreateUserAccountData = {
   fullName: string;
   roles?: string[];
   enabled?: boolean;
+  department?: Types.ObjectId;
   employee?: Types.ObjectId;
   student?: Types.ObjectId;
 };
@@ -45,11 +47,25 @@ class UserAccountService {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid user account id");
     }
-    return UserAccount.findById(id).select("-password");
+    return UserAccount.findById(id).select("-password").populate("department", "name code");
   }
 
-  async getAllUserAccounts(): Promise<IUserAccount[]> {
-    return UserAccount.find().select("-password");
+  async getAllUserAccounts(filter?: { department?: string }): Promise<IUserAccount[]> {
+    const query: Record<string, unknown> = {};
+
+    if (filter?.department) {
+      const [employees, students] = await Promise.all([
+        Employee.find({ department: filter.department }).select("_id"),
+        Student.find({ department: filter.department }).select("_id"),
+      ]);
+
+      query.$or = [
+        { employee: { $in: employees.map((employee) => employee._id) } },
+        { student: { $in: students.map((student) => student._id) } },
+      ];
+    }
+
+    return UserAccount.find(query).select("-password").populate("department", "name code");
   }
 
   async updateUserAccount(

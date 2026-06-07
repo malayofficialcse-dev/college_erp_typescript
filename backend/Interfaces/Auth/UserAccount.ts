@@ -7,6 +7,7 @@ export interface IUserAccount extends Document {
   fullName: string;
   roles: string[];
   enabled: boolean;
+  department?: Types.ObjectId;
   employee?: Types.ObjectId;
   student?: Types.ObjectId;
   comparePassword(candidatePassword: string): Promise<boolean>;

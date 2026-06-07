@@ -18,9 +18,9 @@ export const createTimetable = async (req: Request, res: Response) => {
 
 export const getAllTimetables = async (req: Request, res: Response) => {
   try {
-    const { course, subject, teacher, semester, section, dayOfWeek } = req.query as Record<string, string>;
+    const { course, subject, teacher, semester, section, dayOfWeek, department } = req.query as Record<string, string>;
     const isActive = req.query.isActive !== undefined ? req.query.isActive === "true" : undefined;
-    const timetables = await getAllTimetablesService({ course, subject, teacher, semester, section, dayOfWeek, isActive });
+    const timetables = await getAllTimetablesService({ course, subject, teacher, semester, section, dayOfWeek, department, isActive });
     res.status(200).json({ success: true, count: timetables.length, data: timetables });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

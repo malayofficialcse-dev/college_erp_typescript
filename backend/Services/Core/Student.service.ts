@@ -56,6 +56,7 @@ export const ensureUserAccountForStudent = async (
       fullName,
       roles,
       enabled: true,
+      department: student.department,
       student: student._id,
       ...(password ? { password } : {}),
     });
@@ -76,6 +77,7 @@ export const ensureUserAccountForStudent = async (
     fullName,
     roles,
     enabled: true,
+    department: student.department,
     student: student._id,
   });
 

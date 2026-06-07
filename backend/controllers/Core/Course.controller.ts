@@ -28,9 +28,15 @@ export const createCourse = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllCourses = async (_req: Request, res: Response) => {
+export const getAllCourses = async (req: Request, res: Response) => {
   try {
-    const courses = await getAllCoursesService();
+    const department =
+      typeof req.query.department === "string"
+        ? req.query.department
+        : typeof req.query.departmentId === "string"
+          ? req.query.departmentId
+          : undefined;
+    const courses = await getAllCoursesService({ department });
     res.status(200).json({
       message: `${courses.length} courses found`,
       success: true,
@@ -57,7 +63,7 @@ export const searchCourses = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 0);
     const size = Number(req.query.size ?? 10);
 
-    let courses = await getAllCoursesService();
+    let courses = await getAllCoursesService({ department: departmentId });
 
     if (keyword) {
       courses = courses.filter(

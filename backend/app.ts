@@ -39,6 +39,7 @@ import transportRoutes from "./routes/facilities/transport.route.ts";
 import noticeRoutes from "./routes/Communication/notice.route.ts";
 import eventRoutes from "./routes/Communication/event.route.ts";
 import authRoutes from "./routes/Auth/auth.route.ts";
+import { attachDepartmentScope } from "./middleware/departmentScope.ts";
 
 import cors from "cors";
 
@@ -57,6 +58,7 @@ app.get("/api/v1/health", (_req, res) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1", attachDepartmentScope);
 
 //core data module routes
 app.use("/api/v1/users", userRoutes);

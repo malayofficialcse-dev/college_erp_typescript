@@ -18,9 +18,9 @@ export const createSubjectAssignment = async (req: Request, res: Response) => {
 
 export const getAllSubjectAssignments = async (req: Request, res: Response) => {
   try {
-    const { teacher, subject, course, semester, section, academicYear } = req.query as Record<string, string>;
+    const { teacher, subject, course, semester, section, academicYear, department } = req.query as Record<string, string>;
     const isActive = req.query.isActive !== undefined ? req.query.isActive === "true" : undefined;
-    const assignments = await getAllSubjectAssignmentsService({ teacher, subject, course, semester, section, academicYear, isActive });
+    const assignments = await getAllSubjectAssignmentsService({ teacher, subject, course, semester, section, academicYear, department, isActive });
     res.status(200).json({ success: true, count: assignments.length, data: assignments });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

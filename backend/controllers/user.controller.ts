@@ -215,7 +215,9 @@ export const deleteUserController = async (req: Request, res: Response) => {
 
 export const getAllUserController = async (req: Request, res: Response) => {
   try {
-    const users = await userAccountService.getAllUserAccounts();
+    const department =
+      typeof req.query.department === "string" ? req.query.department : undefined;
+    const users = await userAccountService.getAllUserAccounts({ department });
 
     res.status(200).json({
       success: true,

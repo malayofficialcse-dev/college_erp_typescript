@@ -32,6 +32,7 @@ export const searchFees = async (req: Request, res: Response) => {
       feeType,
       paymentMethod,
       source,
+      department,
       size,
       page,
     } = req.query as Record<string, string>;
@@ -46,6 +47,7 @@ export const searchFees = async (req: Request, res: Response) => {
       feeType,
       paymentMethod,
       source,
+      department,
       size: size ? parseInt(size) : 50,
       page: page ? parseInt(page) : 1,
     });

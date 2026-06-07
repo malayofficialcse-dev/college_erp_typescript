@@ -1,4 +1,5 @@
 import SubjectAssignment from "../../Models/Core/SubjectAssignment.ts";
+import Course from "../../Models/Core/Courses.ts";
 
 export interface ICreateSubjectAssignmentInput {
   teacher: string;
@@ -37,6 +38,7 @@ export const getAllSubjectAssignmentsService = async (filter: {
   section?: string;
   academicYear?: string;
   isActive?: boolean;
+  department?: string;
 }) => {
   const query: Record<string, unknown> = {};
   if (filter.teacher) query.teacher = filter.teacher;
@@ -46,6 +48,10 @@ export const getAllSubjectAssignmentsService = async (filter: {
   if (filter.section) query.section = filter.section;
   if (filter.academicYear) query.academicYear = filter.academicYear;
   if (filter.isActive !== undefined) query.isActive = filter.isActive;
+  if (filter.department && !filter.course) {
+    const courses = await Course.find({ department: filter.department }).select("_id");
+    query.course = { $in: courses.map((course) => course._id) };
+  }
 
   return SubjectAssignment.find(query)
     .populate("teacher", "firstName lastName employeeCode")

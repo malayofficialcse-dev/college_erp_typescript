@@ -1,5 +1,6 @@
 import Timetable from "../../Models/Core/Timetable.ts";
 import Section from "../../Models/Core/Section.ts";
+import Course from "../../Models/Core/Courses.ts";
 import type { DayOfWeek } from "../../Interfaces/Core/index.ts";
 
 export interface ICreateTimetableInput {
@@ -37,6 +38,7 @@ export const getAllTimetablesService = async (filter: {
   section?: string;
   dayOfWeek?: string;
   isActive?: boolean;
+  department?: string;
 }) => {
   const query: Record<string, unknown> = {};
   if (filter.course) query.course = filter.course;
@@ -46,6 +48,10 @@ export const getAllTimetablesService = async (filter: {
   if (filter.section) query.section = filter.section;
   if (filter.dayOfWeek) query.dayOfWeek = filter.dayOfWeek;
   if (filter.isActive !== undefined) query.isActive = filter.isActive;
+  if (filter.department && !filter.course) {
+    const courses = await Course.find({ department: filter.department }).select("_id");
+    query.course = { $in: courses.map((course) => course._id) };
+  }
 
   return Timetable.find(query)
     .populate("course", "name code")
