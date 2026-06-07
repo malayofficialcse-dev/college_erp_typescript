@@ -25,23 +25,34 @@ export const AuthProvider = ({ children }) => {
 
   /* ── resolve department for employee accounts ──────────────────────── */
   const resolveDepartment = async (userId, roles) => {
+    console.log('[AuthContext] resolveDepartment called for userId:', userId, 'roles:', roles);
     // Admins are unrestricted — no dept scoping
-    if (roles?.includes('ROLE_ADMIN')) return { departmentId: null, departmentName: null };
+    if (roles?.includes('ROLE_ADMIN')) {
+      console.log('[AuthContext] User is admin, returning null scope');
+      return { departmentId: null, departmentName: null };
+    }
     // Students already have dept in their student profile, resolved elsewhere
-    if (roles?.includes('ROLE_STUDENT')) return { departmentId: null, departmentName: null };
+    if (roles?.includes('ROLE_STUDENT')) {
+      console.log('[AuthContext] User is student, returning null scope');
+      return { departmentId: null, departmentName: null };
+    }
 
     try {
       const res = await api.get(`/users/${userId}/employee`);
+      console.log('[AuthContext] fetched employee profile:', res.data);
       const employee = res.data?.data || res.data;
       if (employee?.department) {
         const dept = employee.department;
+        console.log('[AuthContext] resolved department:', dept);
         return {
           departmentId:   dept._id || dept.id || null,
           departmentName: dept.name || null,
         };
+      } else {
+        console.warn('[AuthContext] employee profile has no department linked!');
       }
-    } catch {
-      // no employee profile linked — unrestricted fallback
+    } catch (err) {
+      console.error('[AuthContext] failed to fetch employee department:', err);
     }
     return { departmentId: null, departmentName: null };
   };
@@ -50,16 +61,18 @@ export const AuthProvider = ({ children }) => {
     const restoreSession = async () => {
       const storedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
+      console.log('[AuthContext] restoreSession, storedUser:', storedUser, 'hasToken:', !!token);
       if (storedUser && token) {
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
         try {
           const { departmentId, departmentName } = await resolveDepartment(parsed.id, parsed.roles);
+          console.log('[AuthContext] resolved scope in restoreSession:', { departmentId, departmentName });
           const updatedUser = { ...parsed, departmentId, departmentName };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setUser(updatedUser);
         } catch (err) {
-          console.error("Failed to restore department scope", err);
+          console.error("[AuthContext] Failed to restore department scope:", err);
         }
       }
       setLoading(false);
@@ -69,6 +82,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (user?.id) {
+      console.log('[AuthContext] user changed, fetching permissions for:', user.id);
       fetchPermissions(user.id);
     } else {
       setPermissions([]);
