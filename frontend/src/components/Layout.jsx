@@ -64,8 +64,8 @@ const Layout = () => {
       icon: 'bi-gear-wide-connected',
       isGroup: true,
       items: [
-        { path: '/core/counseling', name: 'Counseling', icon: 'bi-headset' },
-        { path: '/core/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
+        //{ path: '/core/counseling', name: 'Counseling', icon: 'bi-headset' },
+        //{ path: '/core/admissions', name: 'Admissions', icon: 'bi-mortarboard-fill' },
         { path: '/core/academic-years', name: 'Academic Years', icon: 'bi-calendar-range' },
         { path: '/core/semesters', name: 'Semesters', icon: 'bi-list-ol' },
         { path: '/core/departments', name: 'Departments', icon: 'bi-building-fill' },
@@ -170,7 +170,7 @@ const Layout = () => {
   }).filter(category => category.items.length > 0);
 
   React.useEffect(() => {
-    const activeCategory = filteredNavCategories.find(c => 
+    const activeCategory = filteredNavCategories.find(c =>
       c.items?.some(item => location.pathname.startsWith(item.path))
     );
     if (activeCategory && activeCategory.isGroup && !openMenus[activeCategory.title]) {
@@ -248,9 +248,9 @@ const Layout = () => {
               return (
                 <React.Fragment key={index}>
                   {category.items.map((item) => (
-                    <Link 
+                    <Link
                       key={item.path}
-                      to={item.path} 
+                      to={item.path}
                       className={`list-group-item list-group-item-action ${location.pathname.startsWith(item.path) ? 'active-link' : ''}`}
                     >
                       <i className={`bi ${item.icon} fs-5`}></i>
@@ -264,7 +264,7 @@ const Layout = () => {
             const isOpen = openMenus[category.title];
             return (
               <div key={index} className="sidebar-group-container">
-                <div 
+                <div
                   className={`list-group-item list-group-item-action sidebar-group-header ${isOpen ? 'expanded' : ''}`}
                   onClick={() => toggleMenu(category.title)}
                   style={{ cursor: 'pointer', paddingRight: '1.2rem', justifyContent: 'space-between', border: 'none' }}
@@ -273,8 +273,8 @@ const Layout = () => {
                     <i className={`bi ${category.icon} fs-5`}></i>
                     {category.title}
                   </div>
-                  <i 
-                    className={`bi bi-chevron-down text-muted`} 
+                  <i
+                    className={`bi bi-chevron-down text-muted`}
                     style={{
                       transition: 'transform 0.3s ease',
                       transform: isOpen ? 'rotate(-180deg)' : 'rotate(0deg)',
@@ -285,9 +285,9 @@ const Layout = () => {
                 <Collapse in={isOpen}>
                   <div className="sidebar-subgroup mt-1 mb-2">
                     {category.items.map((item) => (
-                      <Link 
+                      <Link
                         key={item.path}
-                        to={item.path} 
+                        to={item.path}
                         className={`list-group-item list-group-item-action subgroup-item ${location.pathname.startsWith(item.path) ? 'active-link' : ''}`}
                       >
                         <div className="subgroup-dot"></div>
@@ -311,7 +311,7 @@ const Layout = () => {
               <button className="btn btn-light border-0 me-3" onClick={toggleSidebar} aria-label="Toggle sidebar">
                 <i className="bi bi-list fs-4"></i>
               </button>
-              
+
               {/* Breadcrumbs and Page Title */}
               <div className="d-none d-md-block me-4">
                 <nav aria-label="breadcrumb">
@@ -323,8 +323,8 @@ const Layout = () => {
                 <h5 className="mb-0 fw-bold text-dark">{getPageTitle()}</h5>
               </div>
 
-              
-              
+
+
             </div>
 
             <div className="d-flex align-items-center ms-auto">
@@ -391,7 +391,7 @@ const Layout = () => {
               {/* Day/Night Mode Toggle */}
               <div className="d-flex align-items-center me-4">
                 <i className={`bi bi-sun-fill me-2 ${theme === 'light' ? 'text-warning' : 'text-secondary'}`}></i>
-                <Form.Check 
+                <Form.Check
                   type="switch"
                   id="theme-switch"
                   checked={theme === 'dark'}
@@ -405,8 +405,8 @@ const Layout = () => {
               <Dropdown align="end">
                 <Dropdown.Toggle variant="transparent" id="dropdown-basic" className="d-flex align-items-center border-0 shadow-none p-0">
                   <div className="me-3 text-end d-none d-md-block">
-                    <div className="fw-bold mb-0 lh-1" style={{color: 'var(--text-primary)'}}>{user?.username || 'Admin User'}</div>
-                    <small style={{color: 'var(--text-secondary)'}}>{user?.roles?.[0] || 'Administrator'}</small>
+                    <div className="fw-bold mb-0 lh-1" style={{ color: 'var(--text-primary)' }}>{user?.username || 'Admin User'}</div>
+                    <small style={{ color: 'var(--text-secondary)' }}>{user?.roles?.[0] || 'Administrator'}</small>
                   </div>
                   <div className="user-avatar">
                     {user?.username?.charAt(0).toUpperCase() || 'A'}
@@ -434,7 +434,7 @@ const Layout = () => {
           <div className="container-fluid flex-grow-1 mb-4">
             <Outlet />
           </div>
-          
+
           {/* Professional Grid Footer */}
           <footer className="footer py-4 px-4 mt-auto border-top" style={{ background: 'var(--surface-color)' }}>
             <Container fluid className="px-0">
