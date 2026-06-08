@@ -12,21 +12,34 @@ const MultiSelect = ({ label, options, selected, onToggle, colorMap }) => {
   return (
     <Dropdown autoClose="outside">
       <Dropdown.Toggle
-        variant="white"
-        className="border shadow-sm d-flex align-items-center gap-2 rounded-pill px-3"
+        variant="light"
+        className="border shadow-sm d-flex align-items-center gap-2 rounded-pill px-3 bg-white"
         style={{ fontSize: '0.85rem' }}
       >
         <span>{label}</span>
         {count > 0 && <Badge pill bg="primary" style={{ fontSize: '0.7rem' }}>{count}</Badge>}
       </Dropdown.Toggle>
       <Dropdown.Menu className="p-2 shadow-lg border-0 rounded-4" style={{ minWidth: 200, maxHeight: 300, overflowY: 'auto' }}>
-        {options.map(opt => (
-          <div key={opt.value} className="px-2 py-1 rounded-3 hover-bg d-flex align-items-center gap-2"
-               style={{ cursor: 'pointer' }} onClick={() => onToggle(opt.value)}>
-            <Form.Check readOnly checked={selected.includes(opt.value)} style={{ pointerEvents: 'none' }} />
-            {colorMap ? <Badge bg={colorMap[opt.value] || 'secondary'} style={{ fontSize: '0.7rem' }}>{opt.label}</Badge> : <span style={{ fontSize: '0.87rem' }}>{opt.label}</span>}
-          </div>
-        ))}
+        {options.length === 0 ? (
+          <div className="text-muted px-2 py-1" style={{ fontSize: '0.85rem' }}>No options available</div>
+        ) : (
+          options.map(opt => (
+            <Dropdown.Item
+              key={opt.value}
+              as="div"
+              className="px-2 py-1 rounded-3 d-flex align-items-center gap-2"
+              style={{ cursor: 'pointer' }}
+              onClick={() => onToggle(opt.value)}
+            >
+              <Form.Check readOnly checked={selected.includes(opt.value)} style={{ pointerEvents: 'none' }} />
+              {colorMap ? (
+                <Badge bg={colorMap[opt.value] || 'secondary'} style={{ fontSize: '0.7rem' }}>{opt.label}</Badge>
+              ) : (
+                <span style={{ fontSize: '0.87rem' }}>{opt.label}</span>
+              )}
+            </Dropdown.Item>
+          ))
+        )}
       </Dropdown.Menu>
     </Dropdown>
   );
@@ -247,7 +260,7 @@ const Employees = () => {
                 onToggle={(val) => toggleFilter('status', val)}
                 colorMap={STATUS_COLOR}
               />
-              {(searchParams.keyword || searchParams.department.length || searchParams.employeeType.length || searchParams.status.length) && (
+              {!!(searchParams.keyword || searchParams.department.length || searchParams.employeeType.length || searchParams.status.length) && (
                 <Button variant="link" className="text-danger text-decoration-none small px-2" onClick={clearFilters}>
                   <i className="bi bi-x-circle me-1"></i>Clear
                 </Button>
