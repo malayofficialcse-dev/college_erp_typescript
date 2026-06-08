@@ -27,13 +27,52 @@ export const createTeacherService = async (data: ICreateTeacherInput) => {
 export const getAllTeachersService = async (filter: {
   department?: string;
   status?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
 }) => {
   const query: Record<string, unknown> = {};
-  if (filter.department) query.department = filter.department;
-  if (filter.status) query.status = filter.status;
-  return Teacher.find(query)
-    .populate("department", "name code")
-    .sort({ firstName: 1 });
+
+  if (filter.department) {
+    const ids = filter.department.split(",").map((s) => s.trim()).filter(Boolean);
+    query.department = ids.length === 1 ? ids[0] : { $in: ids };
+  }
+  if (filter.status) {
+    const statuses = filter.status.split(",").map((s) => s.trim()).filter(Boolean);
+    query.status = statuses.length === 1 ? statuses[0] : { $in: statuses };
+  }
+  if (filter.keyword) {
+    const rx = { $regex: filter.keyword, $options: "i" };
+    query.$or = [
+      { firstName: rx },
+      { lastName: rx },
+      { email: rx },
+      { employeeCode: rx },
+      { phone: rx },
+      { designation: rx },
+    ];
+  }
+
+  const page = Math.max(filter.page ?? 0, 0);
+  const size = Math.min(filter.size ?? 15, 1000);
+  const skip = page * size;
+
+  const [teachers, total] = await Promise.all([
+    Teacher.find(query)
+      .populate("department", "name code")
+      .sort({ firstName: 1 })
+      .skip(skip)
+      .limit(size),
+    Teacher.countDocuments(query),
+  ]);
+
+  return {
+    content: teachers,
+    total,
+    page,
+    size,
+    totalPages: Math.ceil(total / size),
+  };
 };
 
 export const getTeacherByIdService = async (id: string) => {

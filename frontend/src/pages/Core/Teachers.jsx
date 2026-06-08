@@ -20,7 +20,18 @@ const Teachers = () => (
       { name: 'qualification', label: 'Qualification', optional: true },
       { name: 'experience', label: 'Experience (Years)', type: 'number', optional: true },
       { name: 'designation', label: 'Designation', optional: true },
-      { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, cols: 12 },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        optionsList: [
+          { value: 'ACTIVE', label: 'Active' },
+          { value: 'INACTIVE', label: 'Inactive' },
+          { value: 'ON_LEAVE', label: 'On Leave' },
+        ],
+        defaultValue: 'ACTIVE',
+        cols: 12,
+      },
     ]}
     columns={[
       { key: 'employeeCode', label: 'Code', className: 'px-4 fw-bold text-primary' },
@@ -29,7 +40,28 @@ const Teachers = () => (
       { key: 'email', label: 'Email' },
       { key: 'department.name', label: 'Department' },
       { key: 'designation', label: 'Designation' },
-      { key: 'isActive', label: 'Status' },
+      { key: 'status', label: 'Status' },
+    ]}
+    filters={[
+      {
+        type: 'search',
+        name: 'search',
+        placeholder: 'Search by teacher, code, email, designation…',
+      },
+      {
+        type: 'multiselect',
+        name: 'department',
+        label: 'Department',
+        options: 'departments',
+        deriveValue: (item) => item.department,
+        path: 'department',
+      },
+      {
+        type: 'statuschips',
+        name: 'status',
+        label: 'Status',
+        path: 'status',
+      },
     ]}
   />
 );

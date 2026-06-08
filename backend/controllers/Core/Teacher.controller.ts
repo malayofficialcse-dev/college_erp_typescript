@@ -18,9 +18,15 @@ export const createTeacher = async (req: Request, res: Response) => {
 
 export const getAllTeachers = async (req: Request, res: Response) => {
   try {
-    const { department, status } = req.query as Record<string, string>;
-    const teachers = await getAllTeachersService({ department, status });
-    res.status(200).json({ success: true, count: teachers.length, data: teachers });
+    const { department, status, keyword, page, size } = req.query as Record<string, string>;
+    const result = await getAllTeachersService({
+      department,
+      status,
+      keyword,
+      page: page ? parseInt(page, 10) : undefined,
+      size: size ? parseInt(size, 10) : undefined,
+    });
+    res.status(200).json({ success: true, data: result });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }

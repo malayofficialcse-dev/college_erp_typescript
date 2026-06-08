@@ -1,5 +1,6 @@
 import Employee from "../../Models/HR/Employee.ts";
 import UserAccount from "../../Models/Auth/UserAccount.ts";
+import Teacher from "../../Models/Core/Teacher.ts";
 import type { EmployeeType, EmployeeStatus } from "../../Interfaces/HR/index.ts";
 import UserAccountService from "../Auth/UserAccount.ts";
 import { seedDefaultPermissions } from "../Auth/UserPermission.service.ts";
@@ -108,6 +109,37 @@ export const ensureUserAccountForEmployee = async (
   };
 };
 
+export const syncTeacherFromEmployee = async (employee: any) => {
+  if (employee.employeeType === "TEACHING") {
+    let status: "ACTIVE" | "INACTIVE" | "ON_LEAVE" = "ACTIVE";
+    if (employee.status === "INACTIVE" || employee.status === "TERMINATED") {
+      status = "INACTIVE";
+    } else if (employee.status === "ON_LEAVE") {
+      status = "ON_LEAVE";
+    }
+
+    if (employee.department) {
+      await Teacher.findOneAndUpdate(
+        { employeeCode: employee.employeeCode },
+        {
+          employeeCode: employee.employeeCode,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          email: employee.email,
+          phone: employee.phone,
+          designation: employee.designation,
+          joiningDate: employee.joiningDate,
+          department: employee.department._id || employee.department,
+          status,
+        },
+        { upsert: true, new: true }
+      );
+    }
+  } else {
+    await Teacher.findOneAndDelete({ employeeCode: employee.employeeCode });
+  }
+};
+
 export const createEmployeeService = async (data: ICreateEmployeeInput) => {
   if (!data.employeeCode) {
     data.employeeCode = await generateEmployeeCode();
@@ -138,6 +170,8 @@ export const createEmployeeService = async (data: ICreateEmployeeInput) => {
       await Employee.findByIdAndDelete(employee._id);
       throw new Error("Failed to create login account for employee");
     }
+
+    await syncTeacherFromEmployee(employee);
 
     return {
       employee,
@@ -234,6 +268,7 @@ export const updateEmployeeService = async (
   }
 
   await ensureUserAccountForEmployee(String(employee._id));
+  await syncTeacherFromEmployee(employee);
   return employee;
 };
 
@@ -244,6 +279,7 @@ export const deleteEmployeeService = async (id: string) => {
   }
 
   await UserAccount.findOneAndDelete({ employee: employee._id });
+  await Teacher.findOneAndDelete({ employeeCode: employee.employeeCode });
   return employee;
 };
 
