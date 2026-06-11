@@ -198,6 +198,36 @@ Backend REST APIs
 
 ```http
 GET /api/v1/students
+
+---
+
+## CI/CD
+
+This repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.yaml` that:
+
+- Builds and pushes Docker images for `frontend` and `backend` on push.
+- Tags images using the git tag, `latest` for `main`, or `dev-<branch>` for other branches, and a short SHA.
+- Deploys to Kubernetes by updating the `frontend` and `backend` deployments and applying `k8s/k8s-deploy.yaml`.
+
+Required repository secrets:
+
+- `REGISTRY_HOST` — optional registry host (e.g., `docker.io` or `ghcr.io`).
+- `REGISTRY_USERNAME` — container registry username.
+- `REGISTRY_PASSWORD` — container registry password or token.
+- `REGISTRY_NAMESPACE` — registry namespace + repo prefix (e.g., `malaymaity` or `ghcr.io/ORG`). Use this in workflow image tags.
+- `KUBE_CONFIG` — base64-encoded kubeconfig for the target cluster.
+
+How it works:
+
+1. Push to `main` or create a tag to trigger a build.
+2. Images are built for `frontend` and `backend` and pushed to the configured registry.
+3. The `deploy` job decodes `KUBE_CONFIG`, patches deployments to new image tags, then applies `k8s/k8s-deploy.yaml`.
+
+Next steps:
+
+- Add the repository secrets in your GitHub repo settings.
+- Ensure the Kubernetes manifests in `k8s/k8s-deploy.yaml` use image names that match the pushed images.
+- Optionally adapt the workflow to your registry (Docker Hub vs GHCR) and namespaces.
 ```
 
 ## Create Student
