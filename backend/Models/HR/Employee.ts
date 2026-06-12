@@ -20,8 +20,44 @@ const employeeSchema = new Schema<IEmployee>(
       enum: ["TEACHING", "NON_TEACHING", "ADMIN", "SUPPORT"],
       default: "TEACHING",
     },
+
+    // Personal details
     dateOfBirth: { type: Date },
+    gender: { type: String, enum: ["MALE", "FEMALE", "OTHER"] },
+    bloodGroup: { type: String, enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] },
+    maritalStatus: { type: String, enum: ["SINGLE", "MARRIED", "DIVORCED", "WIDOWED"] },
+    nationality: { type: String, trim: true, default: "Indian" },
+    address: { type: String, trim: true },
+
+    // Emergency contact
+    emergencyContactName: { type: String, trim: true },
+    emergencyContactPhone: { type: String, trim: true },
+    emergencyContactRelation: { type: String, trim: true },
+
+    // Identity
+    panNumber: { type: String, trim: true, uppercase: true },
+    aadharNumber: { type: String, trim: true },
+
+    // Professional
     joiningDate: { type: Date },
+    relievingDate: { type: Date },
+    contractType: {
+      type: String,
+      enum: ["PERMANENT", "CONTRACT", "TEMPORARY", "PROBATION"],
+      default: "PERMANENT",
+    },
+    contractEndDate: { type: Date },
+    probationEndDate: { type: Date },
+
+    // Qualifications
+    qualifications: [{ type: String, trim: true }],
+
+    // Bank details
+    bankName: { type: String, trim: true },
+    bankAccountNumber: { type: String, trim: true },
+    ifscCode: { type: String, trim: true, uppercase: true },
+
+    // Salary
     basicSalary: { type: Number, min: 0 },
     hra: { type: Number, default: 0, min: 0 },
     da: { type: Number, default: 0, min: 0 },
@@ -32,11 +68,11 @@ const employeeSchema = new Schema<IEmployee>(
     taxDeduction: { type: Number, default: 0, min: 0 },
     esiDeduction: { type: Number, default: 0, min: 0 },
     otherDeductions: { type: Number, default: 0, min: 0 },
-    address: { type: String, trim: true },
+
     department: { type: Schema.Types.ObjectId, ref: "Department" },
     status: {
       type: String,
-      enum: ["ACTIVE", "INACTIVE", "ON_LEAVE", "TERMINATED"],
+      enum: ["ACTIVE", "INACTIVE", "ON_LEAVE", "TERMINATED", "RESIGNED", "RETIRED"],
       default: "ACTIVE",
     },
   },

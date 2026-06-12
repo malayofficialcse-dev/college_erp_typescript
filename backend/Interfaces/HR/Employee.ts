@@ -6,7 +6,15 @@ export type EmployeeType =
   | "ADMIN"
   | "SUPPORT";
 
-export type EmployeeStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE" | "TERMINATED";
+export type EmployeeStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE" | "TERMINATED" | "RESIGNED" | "RETIRED";
+
+export type ContractType = "PERMANENT" | "CONTRACT" | "TEMPORARY" | "PROBATION";
+
+export type Gender = "MALE" | "FEMALE" | "OTHER";
+
+export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-";
+
+export type MaritalStatus = "SINGLE" | "MARRIED" | "DIVORCED" | "WIDOWED";
 
 export interface IEmployee extends Document {
   employeeCode: string;
@@ -16,8 +24,40 @@ export interface IEmployee extends Document {
   phone: string;
   designation: string;
   employeeType: EmployeeType;
+
+  // Personal details
   dateOfBirth?: Date;
+  gender?: Gender;
+  bloodGroup?: BloodGroup;
+  maritalStatus?: MaritalStatus;
+  nationality?: string;
+  address?: string;
+
+  // Emergency contact
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+
+  // Identity documents
+  panNumber?: string;
+  aadharNumber?: string;
+
+  // Professional details
   joiningDate?: Date;
+  relievingDate?: Date;
+  contractType?: ContractType;
+  contractEndDate?: Date;
+  probationEndDate?: Date;
+
+  // Qualifications
+  qualifications?: string[];
+
+  // Bank details
+  bankName?: string;
+  bankAccountNumber?: string;
+  ifscCode?: string;
+
+  // Salary
   basicSalary?: number;
   hra?: number;
   da?: number;
@@ -28,7 +68,7 @@ export interface IEmployee extends Document {
   taxDeduction?: number;
   esiDeduction?: number;
   otherDeductions?: number;
-  address?: string;
+
   department?: Types.ObjectId;
   status: EmployeeStatus;
   createdAt?: Date;

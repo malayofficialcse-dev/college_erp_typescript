@@ -160,3 +160,81 @@ export const createEmployeeUserAccount = async (req: Request, res: Response) => 
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Generate letter data for a given employee and letter type.
+ * Returns structured JSON — rendering is done client-side.
+ * GET /api/v1/hr/employees/:id/letter/:type
+ */
+export const generateEmployeeLetter = async (req: Request, res: Response) => {
+  try {
+    const { id, type } = req.params;
+    const validTypes = ["offer", "appointment", "relieving", "contract", "experience"];
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Employee id is required" });
+    }
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid letter type. Valid types: ${validTypes.join(", ")}`,
+      });
+    }
+
+    const employee = await getEmployeeByIdService(id);
+    if (!employee) {
+      return res.status(404).json({ success: false, message: "Employee not found" });
+    }
+
+    const emp = employee as any;
+    const dept = emp.department?.name || emp.department || "N/A";
+    const fullName = `${emp.firstName} ${emp.lastName}`;
+    const grossSalary =
+      (emp.basicSalary || 0) +
+      (emp.hra || 0) +
+      (emp.da || 0) +
+      (emp.ta || 0) +
+      (emp.bonus || 0) +
+      (emp.otherAllowances || 0);
+
+    const payload = {
+      type,
+      employee: {
+        id: emp._id || emp.id,
+        fullName,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        employeeCode: emp.employeeCode,
+        designation: emp.designation,
+        department: dept,
+        employeeType: emp.employeeType,
+        email: emp.email,
+        phone: emp.phone,
+        address: emp.address,
+        joiningDate: emp.joiningDate,
+        relievingDate: emp.relievingDate,
+        contractType: emp.contractType || "PERMANENT",
+        contractEndDate: emp.contractEndDate,
+        probationEndDate: emp.probationEndDate,
+        basicSalary: emp.basicSalary || 0,
+        hra: emp.hra || 0,
+        da: emp.da || 0,
+        ta: emp.ta || 0,
+        bonus: emp.bonus || 0,
+        otherAllowances: emp.otherAllowances || 0,
+        pfDeduction: emp.pfDeduction || 0,
+        taxDeduction: emp.taxDeduction || 0,
+        esiDeduction: emp.esiDeduction || 0,
+        otherDeductions: emp.otherDeductions || 0,
+        grossSalary,
+        gender: emp.gender,
+        status: emp.status,
+      },
+      issuedDate: new Date().toISOString(),
+    };
+
+    res.status(200).json({ success: true, data: payload });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
