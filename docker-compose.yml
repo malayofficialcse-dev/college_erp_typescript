@@ -4,10 +4,10 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=5001
-      # Points to your Windows host's local MongoDB (mongodb://localhost:27017/erp)
-      - MONGODB_URI=mongodb://host.docker.internal:27017/erp
     ports:
       - "5001:5001"
     extra_hosts:
