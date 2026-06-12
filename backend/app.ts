@@ -42,10 +42,29 @@ import authRoutes from "./routes/Auth/auth.route.ts";
 import { attachDepartmentScope } from "./middleware/departmentScope.ts";
 
 import cors from "cors";
+import client from "prom-client";
 
 const app = express();
 
+// Prometheus: collect default metrics
+client.collectDefaultMetrics();
+
+const httpRequestDurationSeconds = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+});
+
 app.use(express.json());
+app.use((req, res, next) => {
+  const end = httpRequestDurationSeconds.startTimer();
+  res.on("finish", () => {
+    const route = req.route?.path ?? req.path;
+    end({ method: req.method, route, status_code: String(res.statusCode) });
+  });
+  next();
+});
 app.use(
   cors({
     origin: ["http://localhost:5174", "http://localhost:5173", "http://localhost:4173"],
@@ -55,6 +74,15 @@ app.use(
 
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ success: true, message: "ERP API is running" });
+});
+
+app.get('/metrics', async (_req, res) => {
+  try {
+    res.set('Content-Type', client.register.contentType);
+    res.send(await client.register.metrics());
+  } catch (err) {
+    res.status(500).send('Error collecting metrics');
+  }
 });
 
 app.use("/api/v1/auth", authRoutes);
