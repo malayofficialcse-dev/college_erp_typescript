@@ -1,12 +1,4 @@
 services:
-  mongo:
-    image: mongo:7.0
-    restart: unless-stopped
-    volumes:
-      - mongo-data:/data/db
-    ports:
-      - "27017:27017"
-
   backend:
     build:
       context: ./backend
@@ -14,11 +6,12 @@ services:
     restart: unless-stopped
     environment:
       - PORT=5001
-      - MONGODB_URI=mongodb://mongo:27017/erp
+      # Points to your Windows host's local MongoDB (mongodb://localhost:27017/erp)
+      - MONGODB_URI=mongodb://host.docker.internal:27017/erp
     ports:
       - "5001:5001"
-    depends_on:
-      - mongo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # ensures Linux Docker also works
 
   frontend:
     build:
@@ -29,6 +22,3 @@ services:
       - "4173:80"
     depends_on:
       - backend
-
-volumes:
-  mongo-data:
