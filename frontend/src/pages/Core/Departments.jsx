@@ -261,11 +261,14 @@ const Departments = () => {
   const [departments, setDepartments] = useState([]);
 
   const [showModal, setShowModal] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
 
   const [currentDepartment, setCurrentDepartment] = useState({
     name: "",
     code: "",
     estdYear: "",
+    designations: "",
+    _id: null,
   });
 
   // ================= FETCH ALL DEPARTMENTS =================
@@ -308,7 +311,21 @@ const Departments = () => {
 
     try {
 
-      await api.post("/departments", currentDepartment);
+      if (!currentDepartment.code || !currentDepartment.name) {
+        throw new Error("Department code and name are required");
+      }
+
+      if (currentDepartment._id) {
+        await api.put(`/departments/${currentDepartment._id}`, {
+          ...currentDepartment,
+          designations: currentDepartment.designations,
+        });
+      } else {
+        await api.post("/departments", {
+          ...currentDepartment,
+          designations: currentDepartment.designations,
+        });
+      }
 
       setShowModal(false);
 
@@ -316,7 +333,11 @@ const Departments = () => {
         name: "",
         code: "",
         estdYear: "",
+        designations: "",
+        _id: null,
       });
+
+      setIsEdit(false);
 
       fetchDepartments();
 
@@ -346,6 +367,32 @@ const Departments = () => {
     }
   };
 
+  const handleEditDepartment = (department) => {
+    setCurrentDepartment({
+      _id: department._id,
+      name: department.name || "",
+      code: department.code || "",
+      estdYear: department.estdYear || "",
+      designations: Array.isArray(department.designations)
+        ? department.designations.join(", ")
+        : department.designations || "",
+    });
+    setIsEdit(true);
+    setShowModal(true);
+  };
+
+  const handleCreateDepartment = () => {
+    setCurrentDepartment({
+      _id: null,
+      name: "",
+      code: "",
+      estdYear: "",
+      designations: "",
+    });
+    setIsEdit(false);
+    setShowModal(true);
+  };
+
   return (
     <div className="container-fluid mt-3">
 
@@ -359,12 +406,20 @@ const Departments = () => {
 
         <Button
           variant="primary"
-          onClick={() => setShowModal(true)}
+          onClick={handleCreateDepartment}
         >
           Add Department
         </Button>
 
       </div>
+                     <Button
+                       variant="secondary"
+                       size="sm"
+                       className="ms-2"
+                       onClick={() => handleEditDepartment(dept)}
+                     >
+                       Edit
+                     </Button>
 
       {/* TABLE */}
 
@@ -466,7 +521,7 @@ const Departments = () => {
         <Modal.Header closeButton>
 
           <Modal.Title>
-            Create Department
+              {isEdit ? "Edit Department" : "Create Department"}
           </Modal.Title>
 
         </Modal.Header>
@@ -532,6 +587,29 @@ const Departments = () => {
                     onChange={handleFormChange}
                     required
                   />
+
+                </Form.Group>
+
+              </Col>
+
+              <Col md={12}>
+
+                <Form.Group>
+
+                  <Form.Label>
+                    Designations (comma-separated)
+                  </Form.Label>
+
+                  <Form.Control
+                    type="text"
+                    name="designations"
+                    value={currentDepartment.designations}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Professor, Assistant Professor, Lab Assistant"
+                  />
+                  <Form.Text className="text-muted">
+                    Enter department designations separated by commas. These will be available for employees in this department.
+                  </Form.Text>
 
                 </Form.Group>
 

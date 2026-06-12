@@ -93,6 +93,7 @@ const Employees = () => {
 
   const [employees, setEmployees]     = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [departmentDesignations, setDepartmentDesignations] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [total, setTotal]             = useState(0);
   const [totalPages, setTotalPages]   = useState(0);
@@ -144,7 +145,8 @@ const Employees = () => {
   const fetchDepartments = async () => {
     try {
       const res = await api.get('/departments');
-      setDepartments(Array.isArray(res.data) ? res.data : (res.data?.content || []));
+      const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setDepartments(list);
     } catch { setDepartments([]); }
   };
 
@@ -182,10 +184,11 @@ const Employees = () => {
   const openEdit = (emp) => {
     setIsEdit(true);
     const fmt = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+    const departmentId = emp.department?.id || emp.department?._id || '';
     setCurrentEmployee({
       ...EMPTY_EMPLOYEE,
       ...emp,
-      departmentId: emp.department?.id || emp.department?._id || '',
+      departmentId,
       dateOfBirth:    fmt(emp.dateOfBirth),
       joiningDate:    fmt(emp.joiningDate),
       relievingDate:  fmt(emp.relievingDate),
@@ -193,6 +196,7 @@ const Employees = () => {
       probationEndDate: fmt(emp.probationEndDate),
       qualifications: Array.isArray(emp.qualifications) ? emp.qualifications : [],
     });
+    setDepartmentDesignations(departments.find(d => (d.id || d._id) === departmentId)?.designations || []);
     setActiveTab('personal');
     setNewQual('');
     setShowModal(true);
@@ -284,6 +288,23 @@ const Employees = () => {
 
   /* ── Helper ─────────────────────────────────────────────────────────────── */
   const setField = (key, val) => setCurrentEmployee(prev => ({ ...prev, [key]: val }));
+
+  const getDesignationsForDepartment = (departmentId) => {
+    const dept = departments.find((d) => (d.id || d._id) === departmentId);
+    return Array.isArray(dept?.designations) ? dept.designations : [];
+  };
+
+  useEffect(() => {
+    if (currentEmployee.departmentId) {
+      const designations = getDesignationsForDepartment(currentEmployee.departmentId);
+      setDepartmentDesignations(designations);
+      if (designations.length > 0 && !designations.includes(currentEmployee.designation)) {
+        setCurrentEmployee((prev) => ({ ...prev, designation: '' }));
+      }
+    } else {
+      setDepartmentDesignations([]);
+    }
+  }, [currentEmployee.departmentId, departments]);
 
   /* ── Guard ──────────────────────────────────────────────────────────────── */
   if (!hasPermission('employees', 'view')) {
@@ -616,7 +637,12 @@ const Employees = () => {
                       <Form.Group>
                         <Form.Label className="text-muted small fw-bold">Department *</Form.Label>
                         <Form.Select className="rounded-3" required value={currentEmployee.departmentId}
-                          onChange={e => setField('departmentId', e.target.value)}>
+                          onChange={e => {
+                            const selectedDeptId = e.target.value;
+                            setField('departmentId', selectedDeptId);
+                            const selectedDept = departments.find(d => (d.id || d._id) === selectedDeptId);
+                            setDepartmentDesignations(Array.isArray(selectedDept?.designations) ? selectedDept.designations : []);
+                          }}>
                           <option value="">Select Department</option>
                           {departments.map(dept => <option key={dept.id || dept._id} value={dept.id || dept._id}>{dept.name}</option>)}
                         </Form.Select>
@@ -633,8 +659,18 @@ const Employees = () => {
                     <Col md={6}>
                       <Form.Group>
                         <Form.Label className="text-muted small fw-bold">Designation *</Form.Label>
-                        <Form.Control className="rounded-3" required value={currentEmployee.designation}
-                          onChange={e => setField('designation', e.target.value)} />
+                        {departmentDesignations.length > 0 ? (
+                          <Form.Select className="rounded-3" required value={currentEmployee.designation}
+                            onChange={e => setField('designation', e.target.value)}>
+                            <option value="">Select Designation</option>
+                            {departmentDesignations.map((designation) => (
+                              <option key={designation} value={designation}>{designation}</option>
+                            ))}
+                          </Form.Select>
+                        ) : (
+                          <Form.Control className="rounded-3" required value={currentEmployee.designation}
+                            onChange={e => setField('designation', e.target.value)} placeholder="Enter designation" />
+                        )}
                       </Form.Group>
                     </Col>
                     <Col md={6}>

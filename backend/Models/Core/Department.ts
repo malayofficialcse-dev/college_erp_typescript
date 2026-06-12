@@ -10,6 +10,7 @@ const departmentSchema = new Schema<Idepartment>(
     hodName: { type: String, trim: true },
     email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
+    designations: [{ type: String, trim: true }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

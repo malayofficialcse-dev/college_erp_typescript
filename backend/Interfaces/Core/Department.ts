@@ -8,6 +8,7 @@ interface Idepartment extends Document {
   hodName?: string;
   email?: string;
   phone?: string;
+  designations?: string[];
   isActive: boolean;
 }
 

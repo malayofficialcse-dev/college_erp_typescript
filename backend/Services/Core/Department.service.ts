@@ -4,6 +4,7 @@ export const createDepartmentService = async (dData: {
   name: string;
   code: string;
   estdYear?: string;
+  designations?: string[] | string;
 }) => {
   const deptCode = await Department.findOne({ code: dData.code });
 
@@ -11,7 +12,19 @@ export const createDepartmentService = async (dData: {
     throw new Error("Department already exists");
   }
 
-  return Department.create(dData);
+  const cleanDesignations = Array.isArray(dData.designations)
+    ? dData.designations.filter((item) => typeof item === "string" && item.trim().length > 0)
+    : typeof dData.designations === "string"
+    ? dData.designations
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+    : [];
+
+  return Department.create({
+    ...dData,
+    designations: cleanDesignations,
+  });
 };
 
 export const findDepartmentByIdService = async (id: string) => {
@@ -25,9 +38,22 @@ export const getAllDepartmentService = async (filter?: { department?: string }) 
 
 export const updateDepartmentService = async (
   id: string,
-  data: { name?: string; code?: string; estdYear?: string }
+  data: { name?: string; code?: string; estdYear?: string; designations?: string[] | string }
 ) => {
-  const department = await Department.findByIdAndUpdate(id, data, {
+  const updatedData = { ...data };
+
+  if (Array.isArray(data.designations)) {
+    updatedData.designations = data.designations.filter(
+      (item) => typeof item === "string" && item.trim().length > 0
+    );
+  } else if (typeof data.designations === "string") {
+    updatedData.designations = data.designations
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  const department = await Department.findByIdAndUpdate(id, updatedData, {
     new: true,
     runValidators: true,
   });
