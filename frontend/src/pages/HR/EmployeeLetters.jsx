@@ -41,6 +41,60 @@ const LETTER_TYPES = [
 ];
 
 /* ─── Shared Letter Shell ────────────────────────────────────────────────── */
+const AuthSignatureBlock = ({ role = "Authorised Signatory", department = "HR Department", showStamp = true }) => (
+  <div style={{ textAlign: 'center', position: 'relative', width: 200 }}>
+    {showStamp && (
+      <div style={{
+        width: '110px',
+        height: '110px',
+        border: '3px solid rgba(225, 29, 72, 0.6)',
+        borderRadius: '50%',
+        position: 'absolute',
+        bottom: '30px',
+        left: '50%',
+        transform: 'translateX(-50%) rotate(-15deg)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        color: 'rgba(225, 29, 72, 0.7)',
+        fontFamily: 'serif',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}>
+        <div style={{
+          width: '98px',
+          height: '98px',
+          border: '1px dashed rgba(225, 29, 72, 0.5)',
+          borderRadius: '50%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2px'
+        }}>
+          <div style={{ fontSize: '9px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 'bold' }}>ERP PRO</div>
+          <div style={{ fontSize: '13px', fontWeight: '900', letterSpacing: '1px', borderTop: '1.5px solid rgba(225, 29, 72, 0.6)', borderBottom: '1.5px solid rgba(225, 29, 72, 0.6)', padding: '3px 0', margin: '4px 0' }}>OFFICIAL</div>
+          <div style={{ fontSize: '8px' }}>SEAL</div>
+        </div>
+      </div>
+    )}
+    
+    <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Fake signature scribble */}
+      <div style={{ height: 50, display: 'flex', alignItems: 'end', justifyContent: 'center', paddingBottom: 8 }}>
+        <span style={{ fontFamily: "'Brush Script MT', 'Lucida Handwriting', cursive", fontSize: 26, color: '#1e3a8a', transform: 'rotate(-5deg)', opacity: 0.85 }}>
+          Authorized
+        </span>
+      </div>
+      <div style={{ borderTop: '1px solid #374151', width: 200, margin: '0 auto 4px' }}></div>
+      <div style={{ fontSize: 13, color: '#1f2937', fontWeight: 600 }}>{role}</div>
+      <div style={{ fontSize: 11, color: '#64748b' }}>{department}</div>
+      <div style={{ fontSize: 11, color: '#64748b' }}>{COLLEGE_NAME}</div>
+    </div>
+  </div>
+);
+
 const LetterShell = ({ children, refEl }) => (
   <div ref={refEl} id="letter-print-area" style={{
     fontFamily: "'Georgia', 'Times New Roman', serif",
@@ -54,32 +108,56 @@ const LetterShell = ({ children, refEl }) => (
     border: '1px solid #e2e8f0',
     borderRadius: 8,
     boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+    position: 'relative',
+    overflow: 'hidden'
   }}>
-    {/* Letterhead */}
-    <div style={{ borderBottom: '3px solid #4318FF', paddingBottom: 16, marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 12,
-          background: 'linear-gradient(135deg,#4318FF,#868CFF)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{ color: '#fff', fontWeight: 900, fontSize: 22, fontFamily: 'sans-serif' }}>E</span>
-        </div>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#4318FF', fontFamily: 'sans-serif', letterSpacing: '-0.3px' }}>
-            {COLLEGE_NAME}
+    {/* Watermark */}
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%) rotate(-35deg)',
+      fontSize: '80px',
+      fontWeight: 900,
+      color: 'rgba(67, 24, 255, 0.03)',
+      whiteSpace: 'nowrap',
+      pointerEvents: 'none',
+      zIndex: 0,
+      fontFamily: 'sans-serif',
+      userSelect: 'none'
+    }}>
+      {COLLEGE_NAME.toUpperCase()}
+    </div>
+    
+    <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* Letterhead */}
+      <div style={{ borderBottom: '3px solid #4318FF', paddingBottom: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 12,
+            background: 'linear-gradient(135deg,#4318FF,#868CFF)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <span style={{ color: '#fff', fontWeight: 900, fontSize: 22, fontFamily: 'sans-serif' }}>E</span>
           </div>
-          <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'sans-serif' }}>
-            {COLLEGE_ADDRESS} &nbsp;|&nbsp; {COLLEGE_EMAIL} &nbsp;|&nbsp; {COLLEGE_PHONE}
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#4318FF', fontFamily: 'sans-serif', letterSpacing: '-0.3px' }}>
+              {COLLEGE_NAME}
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'sans-serif' }}>
+              {COLLEGE_ADDRESS} &nbsp;|&nbsp; {COLLEGE_EMAIL} &nbsp;|&nbsp; {COLLEGE_PHONE}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    {children}
-    {/* Footer */}
-    <div style={{ marginTop: 48, borderTop: '1px solid #e2e8f0', paddingTop: 16, fontSize: 11, color: '#94a3b8', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      This is a system-generated document issued by {COLLEGE_NAME}. For verification, contact {COLLEGE_EMAIL}.
+      
+      {children}
+      
+      {/* Footer */}
+      <div style={{ marginTop: 48, borderTop: '1px solid #e2e8f0', paddingTop: 16, fontSize: 11, color: '#94a3b8', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        This is a system-generated document issued by {COLLEGE_NAME}. For verification, contact {COLLEGE_EMAIL}.
+      </div>
     </div>
   </div>
 );
@@ -130,20 +208,12 @@ const OfferLetter = ({ emp }) => (
       Kindly confirm your acceptance of this offer by signing and returning a copy of this letter on or before your 
       date of joining. We look forward to having you on our team.
     </p>
-    <div style={{ marginTop: 48, display: 'flex', justifyContent: 'space-between', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 180, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>HR Manager</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>{COLLEGE_NAME}</div>
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 180, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Principal / Director</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>{COLLEGE_NAME}</div>
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 180, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Signature (Candidate)</div>
+    <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontFamily: 'sans-serif' }}>
+      <AuthSignatureBlock role="HR Manager" />
+      <div style={{ textAlign: 'center', width: 200 }}>
+        <div style={{ height: 50 }}></div>
+        <div style={{ borderTop: '1px solid #374151', width: 200, margin: '0 auto 4px' }}></div>
+        <div style={{ fontSize: 12, color: '#1f2937', fontWeight: 600 }}>Signature (Candidate)</div>
         <div style={{ fontSize: 12, color: '#64748b' }}>Date: ________________</div>
       </div>
     </div>
@@ -196,15 +266,12 @@ const AppointmentLetter = ({ emp }) => (
       </li>
     </ol>
     <p>Please sign and return the duplicate copy of this letter as a token of your acceptance.</p>
-    <div style={{ marginTop: 48, display: 'flex', justifyContent: 'space-between', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 180, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Authorised Signatory</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>HR Department</div>
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 180, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Employee Signature</div>
+    <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontFamily: 'sans-serif' }}>
+      <AuthSignatureBlock />
+      <div style={{ textAlign: 'center', width: 200 }}>
+        <div style={{ height: 50 }}></div>
+        <div style={{ borderTop: '1px solid #374151', width: 200, margin: '0 auto 4px' }}></div>
+        <div style={{ fontSize: 12, color: '#1f2937', fontWeight: 600 }}>Employee Signature</div>
         <div style={{ fontSize: 12, color: '#64748b' }}>Date: ________________</div>
       </div>
     </div>
@@ -247,14 +314,8 @@ const RelievingLetter = ({ emp }) => (
     <p>
       We wish {emp.firstName} all the best in future endeavours.
     </p>
-    <div style={{ marginTop: 48, fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'left' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 200, marginBottom: 4 }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Authorised Signatory</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>HR Manager / Principal</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>{COLLEGE_NAME}</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Date: {todayFmt()}</div>
-      </div>
+    <div style={{ marginTop: 60, fontFamily: 'sans-serif' }}>
+      <AuthSignatureBlock role="HR Manager / Principal" department="Administration" />
     </div>
   </LetterShell>
 );
@@ -308,15 +369,12 @@ const ContractLetter = ({ emp }) => (
     <p style={{ fontSize: 12, color: '#64748b', fontFamily: 'sans-serif' }}>
       Both parties agree to the terms and conditions set forth in this contract and any policies issued by the Institution from time to time.
     </p>
-    <div style={{ marginTop: 48, display: 'flex', justifyContent: 'space-between', fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'center' }}>
+    <div style={{ marginTop: 60, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontFamily: 'sans-serif' }}>
+      <AuthSignatureBlock role="Authorised Representative" />
+      <div style={{ textAlign: 'center', width: 200 }}>
+        <div style={{ height: 50 }}></div>
         <div style={{ borderTop: '1px solid #374151', width: 200, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Authorised Representative</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>{COLLEGE_NAME}</div>
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 200, margin: '0 auto 4px' }}></div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Employee Signature</div>
+        <div style={{ fontSize: 12, color: '#1f2937', fontWeight: 600 }}>Employee Signature</div>
         <div style={{ fontSize: 12, color: '#64748b' }}>Date: ________________</div>
       </div>
     </div>
@@ -357,15 +415,8 @@ const ExperienceLetter = ({ emp }) => (
       This certificate is issued at the request of <strong>{emp.firstName} {emp.lastName}</strong> for whatever 
       purpose it may serve. We wish {emp.firstName} continued success in all future pursuits.
     </p>
-    <div style={{ marginTop: 48, fontFamily: 'sans-serif' }}>
-      <div style={{ textAlign: 'left' }}>
-        <div style={{ borderTop: '1px solid #374151', width: 220, marginBottom: 4 }}></div>
-        <div style={{ fontSize: 12, color: '#374151', fontWeight: 600 }}>Authorised Signatory</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>HR Manager / Principal</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>{COLLEGE_NAME}</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Contact: {COLLEGE_EMAIL}</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>Date: {todayFmt()}</div>
-      </div>
+    <div style={{ marginTop: 60, fontFamily: 'sans-serif' }}>
+      <AuthSignatureBlock role="HR Manager / Principal" department="Administration" />
     </div>
   </LetterShell>
 );

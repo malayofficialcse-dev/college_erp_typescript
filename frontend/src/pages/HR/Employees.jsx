@@ -93,6 +93,7 @@ const Employees = () => {
 
   const [employees, setEmployees]     = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [allDesignations, setAllDesignations] = useState([]);
   const [departmentDesignations, setDepartmentDesignations] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [total, setTotal]             = useState(0);
@@ -150,7 +151,15 @@ const Employees = () => {
     } catch { setDepartments([]); }
   };
 
-  useEffect(() => { fetchDepartments(); }, []);
+  const fetchDesignations = async () => {
+    try {
+      const res = await api.get('/designations');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+      setAllDesignations(list);
+    } catch { setAllDesignations([]); }
+  };
+
+  useEffect(() => { fetchDepartments(); fetchDesignations(); }, []);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
@@ -289,22 +298,20 @@ const Employees = () => {
   /* ── Helper ─────────────────────────────────────────────────────────────── */
   const setField = (key, val) => setCurrentEmployee(prev => ({ ...prev, [key]: val }));
 
-  const getDesignationsForDepartment = (departmentId) => {
-    const dept = departments.find((d) => (d.id || d._id) === departmentId);
-    return Array.isArray(dept?.designations) ? dept.designations : [];
-  };
-
   useEffect(() => {
     if (currentEmployee.departmentId) {
-      const designations = getDesignationsForDepartment(currentEmployee.departmentId);
-      setDepartmentDesignations(designations);
-      if (designations.length > 0 && !designations.includes(currentEmployee.designation)) {
+      const deptDesignations = allDesignations
+        .filter(d => !d.department || d.department._id === currentEmployee.departmentId || d.department.id === currentEmployee.departmentId || d.department === currentEmployee.departmentId)
+        .map(d => d.title);
+      setDepartmentDesignations(deptDesignations);
+      if (deptDesignations.length > 0 && !deptDesignations.includes(currentEmployee.designation)) {
         setCurrentEmployee((prev) => ({ ...prev, designation: '' }));
       }
     } else {
-      setDepartmentDesignations([]);
+      const globalDesignations = allDesignations.filter(d => !d.department).map(d => d.title);
+      setDepartmentDesignations(globalDesignations);
     }
-  }, [currentEmployee.departmentId, departments]);
+  }, [currentEmployee.departmentId, allDesignations]);
 
   /* ── Guard ──────────────────────────────────────────────────────────────── */
   if (!hasPermission('employees', 'view')) {

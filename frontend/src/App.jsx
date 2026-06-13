@@ -12,6 +12,7 @@ import Employees from './pages/HR/Employees';
 import Students from './pages/Academics/Students';
 import Courses from './pages/Core/Courses';
 import Departments from './pages/Core/Departments';
+import Designations from './pages/Core/Designations';
 import Classrooms from './pages/Core/Classrooms';
 import Sections from './pages/Core/Sections';
 import Sessions from './pages/Core/Sessions';
@@ -96,6 +97,7 @@ function App() {
               <Route path="employees" element={<Employees />} />
               <Route path="courses" element={<Courses />} />
               <Route path="departments" element={<Departments />} />
+              <Route path="designations" element={<Designations />} />
               <Route path="classrooms" element={<Classrooms />} />
               <Route path="sections" element={<Sections />} />
               <Route path="sessions" element={<Sessions />} />
@@ -112,6 +114,7 @@ function App() {
               <Route path="core/students" element={<CoreStudents />} />
               <Route path="core/courses" element={<Courses />} />
               <Route path="core/departments" element={<Departments />} />
+              <Route path="core/designations" element={<Designations />} />
               <Route path="core/classrooms" element={<Classrooms />} />
               <Route path="core/sections" element={<Sections />} />
               <Route path="core/sessions" element={<Sessions />} />

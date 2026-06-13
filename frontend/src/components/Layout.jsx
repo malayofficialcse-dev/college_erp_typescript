@@ -69,6 +69,7 @@ const Layout = () => {
         { path: '/core/academic-years', name: 'Academic Years', icon: 'bi-calendar-range' },
         { path: '/core/semesters', name: 'Semesters', icon: 'bi-list-ol' },
         { path: '/core/departments', name: 'Departments', icon: 'bi-building-fill' },
+        { path: '/core/designations', name: 'Designations', icon: 'bi-person-badge' },
         { path: '/core/courses', name: 'Courses', icon: 'bi-journal-bookmark-fill' },
         { path: '/core/students', name: 'Students', icon: 'bi-person-badge-fill' },
         { path: '/core/teachers', name: 'Teachers', icon: 'bi-person-workspace' },

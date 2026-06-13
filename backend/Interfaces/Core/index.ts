@@ -30,3 +30,4 @@ export type {
   ChequeDetails,
   BankTransferDetails,
 } from "./AdmissionEmi.ts";
+export type { IDesignation } from "./Designation.ts";

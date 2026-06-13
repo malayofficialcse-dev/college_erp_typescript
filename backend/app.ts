@@ -7,6 +7,7 @@ import semesterRoutes from "./routes/Core/semester.route.ts";
 import studentPortalRoutes from "./routes/Core/studentPortal.route.ts";
 import subjectRoutes from "./routes/Core/subject.route.ts";
 import classroomRoutes from "./routes/Core/classroom.route.ts";
+import designationRoutes from "./routes/Core/designation.route.ts";
 
 // HR module routes
 import employeeRoutes from "./routes/HR/employee.route.ts";
@@ -102,6 +103,8 @@ app.use("/api/v1/subject", subjectRoutes);
 app.use("/api/v1/subjects", subjectRoutes);
 app.use("/api/v1/classroom", classroomRoutes);
 app.use("/api/v1/classrooms", classroomRoutes);
+app.use("/api/v1/designation", designationRoutes);
+app.use("/api/v1/designations", designationRoutes);
 
 // Core module (additional)
 app.use("/api/v1/students", studentRoutes);

@@ -16,3 +16,4 @@ export { default as Timetable } from "./Timetable.ts";
 export { default as SubjectAssignment } from "./SubjectAssignment.ts";
 export { default as Counseling } from "./Counseling.ts";
 export { default as AdmissionEmi } from "./AdmissionEmi.ts";
+export { default as Designation } from "./Designation.ts";
