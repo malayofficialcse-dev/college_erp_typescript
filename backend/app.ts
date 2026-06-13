@@ -75,6 +75,10 @@ app.use(
   })
 );
 
+app.get("/", (_req, res) => {
+  res.status(200).json({ success: true, message: "ERP API is running" });
+})
+
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ success: true, message: "ERP API is running" });
 });
