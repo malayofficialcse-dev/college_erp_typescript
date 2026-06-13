@@ -6,15 +6,16 @@ import {
     createDepartment,
     updateDepartmentById,
 } from "../../controllers/Core/Department.controller.ts";
+import { cacheResponse, clearCache } from "../../middleware/cache.middleware.ts";
 
 const router = express.Router();
 
-router.post("/create",createDepartment);
-router.post("/", createDepartment);
-router.get("/getalldept",getAllDepartments);
-router.get("/", getAllDepartments);
-router.get("/:id",getDepartmentById);
-router.put("/:id", updateDepartmentById);
-router.delete("/:id",deleteDepartmentById);
+router.post("/create", clearCache("/api/v1/department"), createDepartment);
+router.post("/", clearCache("/api/v1/department"), createDepartment);
+router.get("/getalldept", cacheResponse(300), getAllDepartments);
+router.get("/", cacheResponse(300), getAllDepartments);
+router.get("/:id", getDepartmentById);
+router.put("/:id", clearCache("/api/v1/department"), updateDepartmentById);
+router.delete("/:id", clearCache("/api/v1/department"), deleteDepartmentById);
 
 export default router;

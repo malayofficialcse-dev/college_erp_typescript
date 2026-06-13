@@ -44,6 +44,7 @@ import { attachDepartmentScope } from "./middleware/departmentScope.ts";
 
 import cors from "cors";
 import client from "prom-client";
+import { globalRateLimiter } from "./middleware/rateLimit.middleware.ts";
 
 const app = express();
 
@@ -58,6 +59,7 @@ const httpRequestDurationSeconds = new client.Histogram({
 });
 
 app.use(express.json());
+app.use(globalRateLimiter);
 app.use((req, res, next) => {
   const end = httpRequestDurationSeconds.startTimer();
   res.on("finish", () => {
