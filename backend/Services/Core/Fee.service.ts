@@ -28,11 +28,29 @@ const computeNetAmount = (data: Pick<ICreateFeeInput, "amount" | "discountAmount
     0
   );
 
-const buildReceiptNumber = (prefix = "REC") =>
-  `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+const buildReceiptNumber = async (prefix = "REC") => {
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const basePrefix = `${prefix}-${dateStr}`;
+
+  const lastFee = await Fee.findOne({ receiptNumber: new RegExp(`^${basePrefix}-`) })
+    .sort({ createdAt: -1 })
+    .select("receiptNumber");
+
+  let nextNum = 1;
+  if (lastFee && lastFee.receiptNumber) {
+    const parts = lastFee.receiptNumber.split('-');
+    const lastNumStr = parts[parts.length - 1];
+    const lastNum = parseInt(lastNumStr, 10);
+    if (!isNaN(lastNum)) {
+      nextNum = lastNum + 1;
+    }
+  }
+
+  return `${basePrefix}-${nextNum.toString().padStart(5, '0')}`;
+};
 
 export const createFeeRecordService = async (data: ICreateFeeInput) => {
-  const receiptNumber = data.receiptNumber || buildReceiptNumber();
+  const receiptNumber = data.receiptNumber || (await buildReceiptNumber());
   const netAmount = computeNetAmount(data);
   return Fee.create({ ...(data as any), receiptNumber, netAmount });
 };
@@ -42,7 +60,7 @@ export const upsertFeeRecordService = async (
   data: ICreateFeeInput
 ) => {
   const existing = await Fee.findOne(filter).select("receiptNumber");
-  const receiptNumber = data.receiptNumber || existing?.receiptNumber || buildReceiptNumber(data.source || "REC");
+  const receiptNumber = data.receiptNumber || existing?.receiptNumber || (await buildReceiptNumber(data.source || "REC"));
   const netAmount = computeNetAmount(data);
 
   return Fee.findOneAndUpdate(
